@@ -1,0 +1,6 @@
+name = "pengawasan-ai"
+main = "index.js"
+compatibility_date = "2025-09-01"
+
+[observability]
+enabled = true
