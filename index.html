@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="Dashboard analisis tagihan cabang."><meta name="theme-color" content="#eaf2ff"><title>Pelacak Tagihan Cabang</title><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="Dashboard analisis tagihan cabang."><meta name="theme-color" content="#eaf2ff"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pengawasan"><link rel="manifest" href="manifest.webmanifest"><script src="ai-config.js"></script><link rel="icon" href="icons/icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="icons/icon.svg"><title>Pelacak Tagihan Cabang</title><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Nunito:wght@400;600;700;800&display=swap">
 <style>
@@ -354,7 +354,7 @@ function analyze(snap){
   return {items:out,chg,loans,printDay}}
 
 /* ---------- state ---------- */
-let S={mut:'baru',queue:[],year:0,metric:'n',asTable:false,cur:null,tab:'ringkas',sheet:null,sq:'',sao:'',sshow:60,open:new Set(),f:{q:'',sev:'',cat:'',ao:'',prod:'',sort:'score',show:50},err:'',busy:false,aiKey:'',aiText:'',aiError:'',aiBusy:false};
+let S={mut:'baru',queue:[],year:0,metric:'n',asTable:false,cur:null,tab:'ringkas',sheet:null,sq:'',sao:'',sshow:60,open:new Set(),f:{q:'',sev:'',cat:'',ao:'',prod:'',sort:'score',show:50},err:'',busy:false,aiText:'',aiError:'',aiBusy:false};
 let A=null;
 function curSnap(){const k=S.cur&&mem.snaps[S.cur];return k||null}
 function pickLatest(){const ks=Object.keys(mem.snaps).sort((a,b)=>{const x=mem.snaps[a],y=mem.snaps[b];return(y.tahun*12+y.bulan)-(x.tahun*12+x.bulan)});S.cur=ks[0]||null}
@@ -543,24 +543,23 @@ function aiSummary(){
   return out
 }
 function tabAI(){
-  return '<div class="cols"><div class="card"><h2>Analisa AI (Gemini Flash)</h2><p class="muted" style="margin-bottom:10px">Minta AI merangkum pola risiko, perubahan periode, dan saran pemeriksaan dari angka ringkasan.</p>'+ 
-   '<label style="display:block;margin-bottom:8px">Kunci API Gemini milikmu <input id="aiKey" type="password" autocomplete="off" placeholder="Tempel API key" value="'+esc(S.aiKey)+'" style="display:block;width:100%;margin-top:4px"></label>'+ 
-   '<p class="small muted" style="margin-bottom:10px">Belum punya kunci? Buat gratis di <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Google AI Studio</a>. Kunci hanya disimpan sementara di memori halaman ini dan tidak dimasukkan ke file situs atau localStorage.</p>'+ 
-   '<label class="chk small" style="margin-bottom:12px"><input type="checkbox" id="aiConsent"><span>Saya setuju mengirim <b>angka agregat</b> periode ini ke Google Gemini. Nama nasabah, nomor rekening, nama AO, dan rincian per rekening tidak ikut dikirim. Data pada Gemini API gratis dapat digunakan Google untuk meningkatkan produknya.</span></label>'+ 
-   '<button class="btn pri" id="aiRun" '+(S.aiBusy?'disabled':'')+'>'+(S.aiBusy?'Menganalisis…':'Buat analisa AI')+'</button>'+ 
-   '<p class="small muted" style="margin-top:10px">Kuota gratis memiliki batas dan dapat berubah. Jangan gunakan bila angka agregat ini bersifat rahasia. AI hanya memberi bahan telaah, bukan keputusan kredit atau bukti pelanggaran. <a href="https://ai.google.dev/gemini-api/docs/pricing" target="_blank" rel="noopener">Info kuota dan privasi Gemini</a>.</p></div>'+ 
+  return '<div class="cols"><div class="card"><h2>Analisa AI (Gemini Flash)</h2><p class="muted" style="margin-bottom:10px">Minta AI merangkum pola risiko, perubahan periode, dan saran pemeriksaan dari angka ringkasan.</p>'+
+   '<p class="small muted" style="margin-bottom:10px">API key dikelola admin di backend dan tidak disimpan di HP pengguna.</p>'+
+   '<label class="chk small" style="margin-bottom:12px"><input type="checkbox" id="aiConsent"><span>Saya setuju mengirim <b>angka agregat</b> periode ini ke Google Gemini. Nama nasabah, nomor rekening, nama AO, dan rincian per rekening tidak ikut dikirim. Data pada Gemini API gratis dapat digunakan Google untuk meningkatkan produknya.</span></label>'+
+   '<button class="btn pri" id="aiRun" '+(S.aiBusy||!window.PENGAWASAN_AI_API?'disabled':'')+'>'+(S.aiBusy?'Menganalisis…':'Buat analisa AI')+'</button>'+
+   (!window.PENGAWASAN_AI_API?'<p class="small err" style="margin-top:8px">Backend AI belum dikonfigurasi. Admin perlu mengatur URL Worker di ai-config.js.</p>':'')+
+   '<p class="small muted" style="margin-top:10px">Kuota gratis memiliki batas dan dapat berubah. Jangan gunakan bila angka agregat ini bersifat rahasia. AI hanya memberi bahan telaah, bukan keputusan kredit atau bukti pelanggaran. <a href="https://ai.google.dev/gemini-api/docs/pricing" target="_blank" rel="noopener">Info kuota dan privasi Gemini</a>.</p></div>'+
    (S.aiError?'<div class="card err" role="alert">'+esc(S.aiError)+'</div>':S.aiText?'<div class="card"><h2>Hasil analisa</h2><p class="aiout">'+esc(S.aiText)+'</p></div>':'<div class="card"><h2>Ringkasan yang akan dikirim</h2><p class="muted small">Hanya angka agregat: jumlah rekening per kolektibilitas, total outstanding, jumlah temuan per jenis, dan rasio setoran. Tidak ada baris rekening atau identitas.</p></div>')+'</div>'
 }
 async function runAI(){
-  const key=S.aiKey.trim();if(!key){S.aiError='Masukkan API key Gemini milikmu terlebih dahulu.';render();return}
+  const endpoint=String(window.PENGAWASAN_AI_API||'').trim().replace(/\/$/,'');
+  if(!endpoint){S.aiError='Backend AI belum dikonfigurasi.';render();return}
   S.aiBusy=true;S.aiError='';render();
   try{
-    const summary=aiSummary();
-    const prompt='Bertindak sebagai analis risiko portofolio koperasi yang berhati-hati. Analisis angka agregat berikut dalam bahasa Indonesia. Jangan menyimpulkan kesalahan atau menyarankan penolakan kredit. Bedakan fakta angka dan kemungkinan penyebab. Tulis: (1) 3 temuan utama, (2) perubahan dari periode lalu jika tersedia, (3) tiga pemeriksaan lanjutan yang konkret, (4) keterbatasan data. Jangan minta identitas nasabah. Angka berasal dari laporan lokal dan bisa tidak lengkap. Data JSON agregat: '+JSON.stringify(summary);
-    const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.2,maxOutputTokens:900}})});
-    const data=await res.json();if(!res.ok)throw new Error(data.error?.message||'Permintaan gagal ('+res.status+'). Periksa API key dan kuota gratis.');
-    const text=data.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('').trim();if(!text)throw new Error('AI tidak mengembalikan teks. Coba lagi.');S.aiText=text;
-  }catch(e){S.aiError=e.message||'Gagal menghubungi Gemini. Periksa internet dan API key.'}
+    const res=await fetch(endpoint+'/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({summary:aiSummary()})});
+    const data=await res.json();if(!res.ok)throw new Error(data.error||'Permintaan gagal ('+res.status+'). Coba lagi nanti.');
+    if(!data.text)throw new Error('AI tidak mengembalikan teks. Coba lagi.');S.aiText=data.text;
+  }catch(e){S.aiError=e.message||'Gagal menghubungi backend AI. Periksa koneksi.'}
   finally{S.aiBusy=false;render()}
 }
 
@@ -713,7 +712,7 @@ function bind(){
     ch.addEventListener('click',e=>{const r=e.target.closest('[data-per]');if(!r)return;tip.hidden=true;S.cur=r.dataset.per;recompute();openSheet('coll',+r.dataset.k)})}
   const sel=$('#snapsel',root);if(sel)sel.onchange=e=>{S.cur=e.target.value;S.open.clear();S.f.show=50;recompute();render()};
   root.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{S.tab=b.dataset.tab;render()});
-  const air=$('#aiRun',root);if(air)air.onclick=()=>{const c=$('#aiConsent',root);if(!c||!c.checked){S.aiError='Centang persetujuan pengiriman ringkasan agregat terlebih dahulu.';render();return}S.aiKey=$('#aiKey',root).value;runAI()};
+  const air=$('#aiRun',root);if(air)air.onclick=()=>{const c=$('#aiConsent',root);if(!c||!c.checked){S.aiError='Centang persetujuan pengiriman ringkasan agregat terlebih dahulu.';render();return}runAI()};
   root.querySelectorAll('.row').forEach(b=>b.onclick=()=>{const k=b.dataset.rek;S.open.has(k)?S.open.delete(k):S.open.add(k);render();const e=root.querySelector('.row[data-rek="'+k+'"]');if(e)e.focus({preventScroll:true})});
   const q=$('#q',root);if(q)q.oninput=e=>{S.f.q=e.target.value;S.f.show=50;const p=e.target.selectionStart;render();const n=$('#q');n.focus();n.setSelectionRange(p,p)};
   [['fsev','sev'],['fcat','cat'],['fao','ao'],['fprod','prod'],['fsort','sort']].forEach(([id,k])=>{const e=$('#'+id,root);if(e)e.onchange=ev=>{S.f[k]=ev.target.value;S.f.show=50;render()}});
@@ -737,4 +736,5 @@ window.__app={ingest,get A(){return A},mem:()=>mem};
 })();
 </script>
 
+<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}))}</script>
 </body></html>

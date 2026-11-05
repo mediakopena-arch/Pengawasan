@@ -1,0 +1,16 @@
+{
+  "id": "./",
+  "name": "Pengawasan Tagihan Cabang",
+  "short_name": "Pengawasan",
+  "description": "Dashboard analisis tagihan cabang.",
+  "lang": "id-ID",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#eaf2ff",
+  "theme_color": "#eaf2ff",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
