@@ -271,7 +271,7 @@ function parseRows(rows){
 /* ---------- analisis ---------- */
 const RULES={
   BERHENTI:{cat:'baru',label:'Baru berhenti bayar',sc:85},
-  CAIR:{cat:'baru',label:'Indikasi pencairan baru (<3 bulan tunggakan)',sc:95},
+  CAIR:{cat:'baru',label:'Tidak ada angsuran pada bulan ke-3 setelah pencairan',sc:95},
   MEMBURUK:{cat:'baru',label:'Kolektibilitas memburuk',sc:60},
   KRONIS:{cat:'kronis',label:'Menunggak kronis',sc:30},
   JT_LEWAT:{cat:'kronis',label:'Lewat jatuh tempo, masih ada saldo',sc:40},
@@ -311,10 +311,12 @@ function analyze(snap){
     // streak pembayaran beruntun sebelumnya
     let streak=0;if(hist.length){let k=snap.tahun*12+snap.bulan;for(const h of hist){if(h.tahun*12+h.bulan!==k-1)break;const o=idx(h).get(r.rek);if(o&&o.masuk>0&&o.ta===0)streak++;else break;k--}}
     let seenB=0,paidB=0;for(const h of hist.slice(0,4)){const o=idx(h).get(r.rek);if(o){seenB++;if(o.masuk>0)paidB++}}
-    // Indikasi pencairan baru: saldo masih mendekati plafond, belum ada setoran,
-    // dan tunggakan belum mencapai 3 bulan. Produk 551 hanya ditandai saat baru muncul.
-    if(pctOs>=st.osPlafond&&r.masuk===0&&r.bln<3&&(r.prod!=='551'||!old)){
-      add('CAIR','Saldo masih '+pctOs.toFixed(1).replace('.',',')+'% dari plafond dan belum ada setoran. Tunggakan '+r.bln+' bulan. Periksa tanggal pencairan dan jadwal angsuran; ini indikasi awal, bukan kesimpulan pelanggaran.')}
+    // Gunakan bulan pertama rekening muncul di laporan sebagai perkiraan bulan pencairan.
+    const currentPeriod=snap.tahun*12+snap.bulan;
+    const firstSeen=hist.slice().reverse().find(h=>idx(h).has(r.rek));
+    const monthsAfterFirstSeen=firstSeen?currentPeriod-(firstSeen.tahun*12+firstSeen.bulan):0;
+    if(monthsAfterFirstSeen===3&&r.masuk===0&&duePassed&&owedNow>0){
+      add('CAIR','Rekening muncul pertama kali pada '+BLN[firstSeen.bulan]+' '+firstSeen.tahun+'. Pada bulan ke-3 setelah itu, angsuran sudah jatuh tempo tetapi belum ada setoran. Verifikasi tanggal pencairan dan jadwal angsuran; ini indikasi awal, bukan kesimpulan pelanggaran.')}
     // 2. berhenti bayar
     else if(r.ta===0&&r.tagihan>0&&duePassed&&r.masuk===0&&r.coll<=1){
       add('BERHENTI','Bulan lalu tidak ada tunggakan, bulan ini tagihan '+rp(r.tagihan)+' (jatuh tempo tgl '+dueDay+') belum ada setoran'+(streak?'. Sebelumnya membayar '+streak+' bulan berturut-turut.':'.'))}
@@ -637,7 +639,7 @@ function tabRiwayat(){
 
 function tabAturan(){
   const st=mem.settings;
-  const rules=Object.entries(RULES).map(([k,v])=>[v.label,{BERHENTI:'Tunggakan awal 0 dan kolektibilitas 0–1, tagihan sudah jatuh tempo, setoran 0. Dengan riwayat: rekening yang pada periode sebelumnya membayar (minimal 2 periode, atau periode terakhir) tetapi kini tidak ada setoran dan kolektibilitas masih di bawah 3.',CAIR:'Saldo minimal '+st.osPlafond+'% dari plafond, belum ada setoran, dan tunggakan kurang dari 3 bulan. Verifikasi tanggal pencairan dan jadwal angsuran.',MEMBURUK:'Kolektibilitas naik 2 tingkat atau lebih dari bulan lalu. Perlu riwayat.',KRONIS:'Kolektibilitas 3 atau 4, atau menunggak '+st.blnKronis+' bulan atau lebih.',JT_LEWAT:'Tanggal jatuh tempo sudah lewat per tanggal cetak dan saldo belum nol.',SEBAGIAN:'Setoran kurang dari separuh kewajiban, kolektibilitas di bawah 3.',MIRIP:'Kemiripan nama debitur dengan nama AO di laporan sama atau lebih dari '+st.mirip+'%.',TANPA_AO:'Kolom nama AO berisi "TANPA NAMA".',LEBIH:'Setoran lebih besar dari tunggakan awal ditambah tagihan bulan ini.',GANDA:'Nama yang sama pada lebih dari satu rekening pembiayaan.',DATA:'Outstanding 0 padahal plafond ada dan masih ada tagihan atau tunggakan.'}[k]]);
+  const rules=Object.entries(RULES).map(([k,v])=>[v.label,{BERHENTI:'Tunggakan awal 0 dan kolektibilitas 0–1, tagihan sudah jatuh tempo, setoran 0. Dengan riwayat: rekening yang pada periode sebelumnya membayar (minimal 2 periode, atau periode terakhir) tetapi kini tidak ada setoran dan kolektibilitas masih di bawah 3.',CAIR:'Pada bulan ke-3 sejak rekening pertama muncul di laporan, tandai bila angsuran sudah jatuh tempo tetapi belum ada setoran. Bulan pertama laporan dipakai sebagai perkiraan bulan pencairan.',MEMBURUK:'Kolektibilitas naik 2 tingkat atau lebih dari bulan lalu. Perlu riwayat.',KRONIS:'Kolektibilitas 3 atau 4, atau menunggak '+st.blnKronis+' bulan atau lebih.',JT_LEWAT:'Tanggal jatuh tempo sudah lewat per tanggal cetak dan saldo belum nol.',SEBAGIAN:'Setoran kurang dari separuh kewajiban, kolektibilitas di bawah 3.',MIRIP:'Kemiripan nama debitur dengan nama AO di laporan sama atau lebih dari '+st.mirip+'%.',TANPA_AO:'Kolom nama AO berisi "TANPA NAMA".',LEBIH:'Setoran lebih besar dari tunggakan awal ditambah tagihan bulan ini.',GANDA:'Nama yang sama pada lebih dari satu rekening pembiayaan.',DATA:'Outstanding 0 padahal plafond ada dan masih ada tagihan atau tunggakan.'}[k]]);
   return '<div class="cols"><div class="card"><h2>Pengaturan</h2><div style="display:flex;flex-direction:column;gap:12px">'+
    '<label class="chk"><input type="checkbox" id="sduePass"'+(st.duePass?' checked':'')+'><span>Abaikan tagihan yang tanggal jatuh temponya belum lewat per tanggal cetak. Hari jatuh tempo diambil dari kolom Tgl JT.</span></label>'+
    '<label>Bulan tunggakan untuk kronis <input type="number" id="sbln" min="1" max="24" value="'+st.blnKronis+'" style="width:70px"></label>'+
