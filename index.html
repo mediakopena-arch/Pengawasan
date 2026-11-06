@@ -104,6 +104,7 @@ textarea{width:100%;min-height:70px;background:var(--surface);border:1px solid v
 .seg button{background:var(--surface);border:0;padding:6px 11px;font-size:12px;font-weight:500;color:var(--ink2)}
 .seg button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink)}
 .tip{position:fixed;z-index:30;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;padding:6px 9px;border-radius:5px;max-width:240px}
+.mig td.w{background:var(--hi-bg);color:var(--hi);font-weight:600}.mig td.z{color:var(--ink3)}
 .pending{border-color:var(--accent);display:flex;flex-direction:column;gap:10px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:max(16px,env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:6px;font-size:13px;z-index:20;max-width:90vw}
 .err{color:var(--hi);font-weight:500}
@@ -194,16 +195,6 @@ button.kpi:active{transform:translateY(1px)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 .tabs{flex-wrap:wrap;overflow:visible}
 .sheet-body .note{font-size:13px;color:var(--ink2)}
-.coll-section{display:flex;flex-direction:column;gap:14px}
-.coll-line-filters{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}
-.coll-line-filter{display:inline-flex;align-items:center;gap:6px}
-.coll-line-filter[aria-pressed="false"]{opacity:.45}
-.coll-line-filter i{width:10px;height:10px;border-radius:50%;display:inline-block}
-#collLineChart{display:block;width:100%;height:auto;overflow:visible}
-#collLineChart circle{cursor:pointer}
-#collLineChart circle:focus{outline:none;stroke:var(--ink);stroke-width:4}
-.coll-section .filters{margin:10px 0}
-.coll-section .up{color:var(--hi);font-weight:700}.coll-section .down{color:var(--ok);font-weight:700}
 .install-prompt{position:fixed;z-index:80;left:12px;right:12px;bottom:max(12px,env(safe-area-inset-bottom,0px));max-width:560px;margin:0 auto;padding:14px 16px;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 32px rgba(20,35,80,.22);display:flex;align-items:center;gap:12px}
 .install-prompt[hidden]{display:none}
 .install-copy{flex:1;min-width:0}.install-copy b{display:block;font-size:15px}.install-copy span{display:block;color:var(--ink2);font-size:12px;line-height:1.4;margin-top:2px}
@@ -369,7 +360,7 @@ function analyze(snap){
   return {items:out,chg,loans,printDay}}
 
 /* ---------- state ---------- */
-let S={mut:'baru',queue:[],year:0,cur:null,tab:'ringkas',sheet:null,sq:'',sao:'',sshow:60,open:new Set(),collVisible:[true,true,true,true,true],collList:'',collSearch:'',f:{q:'',sev:'',cat:'',ao:'',prod:'',sort:'score',show:50},err:'',busy:false};
+let S={mut:'baru',queue:[],year:0,metric:'n',asTable:false,cur:null,tab:'ringkas',sheet:null,sq:'',sao:'',sshow:60,open:new Set(),f:{q:'',sev:'',cat:'',ao:'',prod:'',sort:'score',show:50},err:'',busy:false};
 let A=null;
 function curSnap(){const k=S.cur&&mem.snaps[S.cur];return k||null}
 function pickLatest(){const ks=Object.keys(mem.snaps).sort((a,b)=>{const x=mem.snaps[a],y=mem.snaps[b];return(y.tahun*12+y.bulan)-(x.tahun*12+x.bulan)});S.cur=ks[0]||null}
@@ -565,85 +556,40 @@ function collChart(snap,y,metric){
   return'<svg id="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Rekening per Coll tiap bulan tahun '+y+'">'+g+'</svg><div class="legend">'+[0,1,2,3,4].map(k=>'<span><i style="background:var(--c'+k+')"></i>Coll '+k+'</span>').join('')+'</div>'}
 function niceMax(v){if(v<=0)return 1;const e=Math.pow(10,Math.floor(Math.log10(v))),f=v/e;return(f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*e}
 const MON=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-function collTrendChart(year,snaps){
-  const inYear=snaps.filter(s=>s.tahun===year);
-  const maxMonth=Math.max(1,...inYear.map(s=>s.bulan));
-  const byMonth=new Map(inYear.map(s=>[s.bulan,s]));
-  const data=Array.from({length:maxMonth},(_,i)=>{
-    const snap=byMonth.get(i+1);if(!snap)return null;
-    const counts=[0,0,0,0,0];
-    snap.rows.filter(r=>r.prod!=='111').forEach(r=>counts[Math.max(0,Math.min(4,r.coll))]++);
-    return{snap,counts};
-  });
-  const W=760,H=320,L=48,R=16,T=22,B=38,pw=W-L-R,ph=H-T-B;
-  const max=niceMax(Math.max(1,...data.filter(Boolean).flatMap(d=>d.counts)));
-  const X=i=>L+(maxMonth===1?pw/2:i*pw/(maxMonth-1));
-  const Y=v=>T+ph-v/max*ph;
-  const colors=['var(--c0)','var(--c1)','var(--c2)','var(--c3)','var(--c4)'];
-  let svg='';
-  const tickCount=Math.min(5,max);
-  for(let t=0;t<=tickCount;t++){
-    const v=Math.round(max*t/tickCount),y=Y(v);
-    svg+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y+'" y2="'+y+'" stroke="var(--line)"/><text x="'+(L-8)+'" y="'+(y+4)+'" text-anchor="end" font-size="12" fill="var(--ink2)">'+v+'</text>';
-  }
-  data.forEach((d,i)=>{
-    const x=X(i);
-    svg+='<text x="'+x+'" y="'+(H-10)+'" text-anchor="middle" font-size="12" fill="var(--ink2)">'+MON[i]+'</text>';
-  });
-  for(let k=0;k<5;k++){
-    if(!S.collVisible[k])continue;
-    const pts=data.map((d,i)=>d?{x:X(i),y:Y(d.counts[k]),d,i}:null);
-    let run=[];
-    const drawRun=()=>{if(run.length>1)svg+='<polyline fill="none" stroke="'+colors[k]+'" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" points="'+run.map(p=>p.x+','+p.y).join(' ')+'"/>';run=[]};
-    for(const point of pts){if(point)run.push(point);else drawRun()}drawRun();
-    for(const p of pts.filter(Boolean)){
-      const period=esc(periodKey(p.d.snap));
-      svg+='<circle cx="'+p.x+'" cy="'+p.y+'" r="5" fill="'+colors[k]+'" stroke="#fff" stroke-width="2" tabindex="0" role="button" data-coll-point="1" data-period="'+period+'" data-k="'+k+'"><title>'+MON[p.i]+' '+year+' · Coll '+k+' · '+nf.format(p.d.counts[k])+' rekening</title></circle>';
-    }
-  }
-  return '<svg id="collLineChart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Tren jumlah rekening Coll per bulan tahun '+year+'">'+svg+'</svg>';
-}
 function tabGerak(){
-  const snap=curSnap(),y=S.year||snap.tahun;
+  const snap=curSnap(),y=S.year||snap.tahun,metric=S.metric;
   const mine=Object.values(mem.snaps).filter(s=>s.kantor===snap.kantor);
   const years=[...new Set(mine.map(s=>s.tahun).concat([y]))].sort();
-  const inYear=mine.filter(s=>s.tahun===y).sort((a,b)=>a.bulan-b.bulan);
-  const current=curSnap(),prev=current?prevSnaps(current)[0]:null;
-  const prevIndex=prev?idx(prev):new Map();
-  const byRek=new Map(A.items.map(i=>[i.r.rek,i]));
-  const rows=(current?current.rows:[]).filter(r=>r.prod!=='111');
-  const query=S.collSearch.trim().toLocaleLowerCase('id');
-  const selectedRows=rows.filter(r=>(S.collList===''||String(r.coll)===S.collList)&&
-    (!query||r.nama.toLocaleLowerCase('id').includes(query)||r.rek.includes(query)));
-  const colors=['var(--c0)','var(--c1)','var(--c2)','var(--c3)','var(--c4)'];
-  let h='<div class="coll-section">'+
-    '<div class="actions"><label class="muted small">Tahun <select id="yr" data-yr aria-label="Tahun">'+years.map(v=>'<option'+(v===y?' selected':'')+'>'+v+'</option>').join('')+'</select></label></div>'+
-    '<div class="card"><h2>Tren jumlah rekening per Coll</h2><p class="muted small">Setiap garis menunjukkan jumlah rekening pada Coll tersebut tiap bulan. Pilih bulan di bawah grafik atau ketuk titik pada garis untuk melihat daftar rekeningnya.</p>'+
-    '<div class="coll-line-filters">'+[0,1,2,3,4].map(k=>'<button type="button" class="btn sm coll-line-filter" data-coll-toggle="'+k+'" aria-pressed="'+S.collVisible[k]+'"><i style="background:'+colors[k]+'"></i>Coll '+k+'</button>').join('')+'</div>'+collTrendChart(y,mine)+'</div>'+
-    '<div class="card"><h2>Pilih bulan laporan</h2><div class="mgrid">'+MON.map((n,i)=>{const d=inYear.find(s=>s.bulan===i+1);return d?'<button class="mchip has'+(d===current?' sel':'')+'" data-m="'+esc(periodKey(d))+'"><b>'+n+'</b><span>'+nf.format(d.rows.filter(r=>r.prod!=='111').length)+' rek.</span></button>':'<div class="mchip empty"><b>'+n+'</b><span>belum ada</span></div>'}).join('')+'</div></div>';
-  if(!current)return h+'</div>';
-  const listColl=S.collList===''?'Semua Coll':'Coll '+S.collList;
-  h+='<div class="card"><div class="coll-list-head"><div><h2>Rekening · '+listColl+' · '+BLN[current.bulan]+' '+current.tahun+'</h2><p class="muted small">Perubahan Coll dibanding periode sebelumnya juga ditampilkan.</p></div></div>'+
-    '<div class="filters"><input type="search" id="collSearch" placeholder="Cari nama atau nomor rekening" value="'+esc(S.collSearch)+'" aria-label="Cari nama atau nomor rekening">'+
-    '<select id="collListFilter" aria-label="Filter Coll"><option value=""'+(S.collList===''?' selected':'')+'>Semua Coll</option>'+[0,1,2,3,4].map(k=>'<option value="'+k+'"'+(S.collList===String(k)?' selected':'')+'>Coll '+k+'</option>').join('')+'</select></div>'+
-    '<p class="muted small">'+nf.format(selectedRows.length)+' rekening</p>'+
-    (selectedRows.length?'<div class="list">'+selectedRows.map(r=>{
-      const item=byRek.get(r.rek),old=prevIndex.get(r.rek),open=S.open.has(r.rek);
-      let move='Coll '+r.coll;
-      if(old&&old.coll!==r.coll)move='Coll '+old.coll+' → '+r.coll+' · '+(r.coll>old.coll?'naik':'turun');
-      else if(old)move='Coll '+r.coll+' · tetap';
-      const moveClass=old&&r.coll>old.coll?'up':old&&r.coll<old.coll?'down':'';
-      return'<div class="item"><button class="row" data-rek="'+esc(r.rek)+'" aria-expanded="'+open+'"><span class="sev lo">Coll '+r.coll+'</span><span class="who"><b>'+esc(r.nama)+'</b><span class="mono">'+esc(r.rek)+' · '+esc(r.ao)+'</span></span><span class="amt">'+rpc(r.os)+'<small class="'+moveClass+'">'+move+'</small></span></button>'+(open&&item?detailHtml(item):'')+'</div>';
-    }).join('')+'</div>':'<p class="muted">Tidak ada rekening yang cocok.</p>')+'</div>';
-  // Keep the monthly changed-account summary available below the filtered list.
-  if(prev){
-    const up=[],down=[];
-    for(const r of rows){const old=prevIndex.get(r.rek);if(!old||old.coll===r.coll)continue;const item=byRek.get(r.rek);if(!item)continue;(r.coll>old.coll?up:down).push({item,from:old.coll,to:r.coll})}
-    const moveCard=(title,moves,isUp)=>'<div class="card"><h2>'+title+' ('+moves.length+')</h2>'+(moves.length?'<div class="list">'+moves.map(m=>{const i=m.item,r=i.r,open=S.open.has(r.rek);return'<div class="item"><button class="row" data-rek="'+esc(r.rek)+'" aria-expanded="'+open+'"><span class="sev '+(isUp?'hi':'lo')+'">'+(isUp?'Naik':'Turun')+'</span><span class="who"><b>'+esc(r.nama)+'</b><span class="mono">'+esc(r.rek)+'</span></span><span class="amt">Coll '+m.from+' → '+m.to+'<small>'+rpc(r.os)+'</small></span></button>'+(open?detailHtml(i):'')+'</div>'}).join('')+'</div>':'<p class="muted small">Tidak ada rekening.</p>')+'</div>';
-    h+='<div class="cols">'+moveCard('Coll naik / memburuk',up,true)+moveCard('Coll turun / membaik',down,false)+'</div>';
-  }
-  return h+rekapHtml()+'</div>';
-}
+  const byM={};mine.filter(s=>s.tahun===y).forEach(s=>byM[s.bulan]=s);
+  const data=MON.map((_,i)=>{const s=byM[i+1];if(!s)return null;const c=[0,0,0,0,0];
+    s.rows.filter(r=>r.prod!=='111').forEach(r=>{c[Math.min(4,r.coll)]+=metric==='n'?1:r.os});return{s,c,t:c.reduce((a,b)=>a+b,0)}});
+  const fmt=v=>metric==='n'?nf.format(v):rpc(v);
+  let h='<div class="actions"><label class="muted small">Tahun <select id="yr" data-yr aria-label="Tahun">'+years.map(v=>'<option'+(v===y?' selected':'')+'>'+v+'</option>').join('')+'</select></label>'+
+   '<span class="seg" id="mtr"><button data-k="n" aria-pressed="'+(metric==='n')+'">Jumlah rekening</button><button data-k="os" aria-pressed="'+(metric==='os')+'">Outstanding</button></span>'+
+   '<span class="seg" id="vw"><button data-k="g" aria-pressed="'+(!S.asTable)+'">Diagram</button><button data-k="t" aria-pressed="'+S.asTable+'">Tabel</button></span></div>';
+  h+='<div class="card"><h2>Pilih bulan laporan</h2><p class="muted small">Pilih bulan untuk melihat perpindahan Coll dibanding periode sebelumnya.</p><div class="mgrid">'+MON.map((n,i)=>{const d=data[i];return d?'<button class="mchip has'+(d.s===snap?' sel':'')+'" data-m="'+esc(periodKey(d.s))+'"><b>'+n+'</b><span>'+nf.format(d.s.rows.filter(r=>r.prod!=='111').length)+' rek.</span></button>':'<div class="mchip empty"><b>'+n+'</b><span>belum ada</span></div>'}).join('')+'</div></div>';
+  if(S.asTable){
+    h+='<div class="tblbox"><table><thead><tr><th>Bulan</th>'+[0,1,2,3,4].map(k=>'<th>Coll '+k+'</th>').join('')+'<th>Total</th></tr></thead><tbody>'+
+     data.map((d,i)=>d?'<tr><td>'+BLN[i+1]+'</td>'+d.c.map(v=>'<td>'+fmt(v)+'</td>').join('')+'<td>'+fmt(d.t)+'</td></tr>':'').join('')+'</tbody></table></div>'}
+  else h+='<div class="chartbox">'+collChart(snap,y,metric)+'</div>';
+  // migrasi
+  const c=A.chg;
+  if(!c)return h+'<div class="card"><h2>Perpindahan Coll belum tersedia</h2><p class="muted">Dibutuhkan satu periode sebelum '+BLN[snap.bulan]+' '+snap.tahun+' untuk cabang ini.</p></div>';
+  const M=Array.from({length:6},()=>Array(6).fill(0));
+  const pk=idx(c.prev);
+  for(const r of A.loans){const o=pk.get(r.rek);M[o?Math.min(4,o.coll):5][Math.min(4,r.coll)]++}
+  for(const r of c.hilang)M[Math.min(4,r.coll)][5]++;
+  let wor=0,bet=0,same=0;for(let a=0;a<5;a++)for(let b=0;b<5;b++){if(b>a)wor+=M[a][b];else if(b<a)bet+=M[a][b];else same+=M[a][b]}
+  const lab=['Coll 0','Coll 1','Coll 2','Coll 3','Coll 4','Baru'];
+  h+='<div class="card"><h2>Diagram perpindahan Coll: '+BLN[c.prev.bulan]+' '+c.prev.tahun+' → '+BLN[snap.bulan]+' '+snap.tahun+'</h2><p class="muted small" style="margin-bottom:8px">Baris = posisi periode sebelumnya, kolom = posisi sekarang. Sel merah = naik ke Coll lebih tinggi. Memburuk <b>'+wor+'</b> · membaik <b>'+bet+'</b> · tetap <b>'+same+'</b> rekening.</p>'+
+   '<div class="tblbox mig"><table><thead><tr><th>Dari \\ Ke</th>'+[0,1,2,3,4].map(k=>'<th>Coll '+k+'</th>').join('')+'<th>Hilang</th></tr></thead><tbody>'+
+   M.map((row,a)=>'<tr><td>'+lab[a]+'</td>'+row.map((v,b)=>'<td class="'+(!v?'z':(a<5&&b<5&&b>a)?'w':'')+'">'+v+'</td>').join('')+'</tr>').join('')+'</tbody></table></div></div>';
+  const byRek=new Map(A.items.map(i=>[i.r.rek,i])),up=[],down=[];
+  for(const r of A.loans){const old=pk.get(r.rek);if(!old||old.coll===r.coll)continue;const item=byRek.get(r.rek);if(!item)continue;
+    const move={item,from:old.coll,to:r.coll};(r.coll>old.coll?up:down).push(move)}
+  const movementCard=(title,moves,rising)=>'<div class="card"><h2>'+title+' ('+moves.length+')</h2>'+(moves.length?'<div class="list">'+moves.sort((a,b)=>Math.abs(b.to-b.from)-Math.abs(a.to-a.from)).map(m=>{const i=m.item,r=i.r,open=S.open.has(r.rek);return'<div class="item"><button class="row" data-rek="'+esc(r.rek)+'" aria-expanded="'+open+'"><span class="sev '+(rising?'hi':'lo')+'">'+(rising?'Naik':'Turun')+'</span><span class="who"><b>'+esc(r.nama)+'</b><span class="mono">'+esc(r.rek)+'</span></span><span class="amt">Coll '+m.from+' → '+m.to+'<small>'+esc(r.ao)+' · '+rpc(r.os)+'</small></span></button>'+(open?detailHtml(i):'')+'</div>'}).join('')+'</div>':'<p class="muted small">Tidak ada rekening.</p>')+'</div>';
+  h+='<div class="cols">'+movementCard('Coll naik / memburuk',up,true)+movementCard('Coll turun / membaik',down,false)+'</div>';
+  return h+rekapHtml()}
 const plabel=z=>MON[z.bulan-1]+' '+z.tahun;
 function mutasiData(){
   const snap=curSnap(),c=A.chg;if(!c)return null;
@@ -726,8 +672,8 @@ function bind(){
   const pt=$('#pthn',root);if(pt)pt.onchange=e=>{S.queue[0].tahun=Math.min(2100,Math.max(2000,+e.target.value||S.queue[0].tahun));render()};
   const ps=$('#psave',root);if(ps)ps.onclick=confirmPending;
   const pc=$('#pcancel',root);if(pc)pc.onclick=()=>{S.queue.shift();render()};
-  root.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{S.cur=b.dataset.m;S.year=mem.snaps[S.cur].tahun;S.open.clear();recompute();render()});
-  root.querySelectorAll('[data-yr]').forEach(b=>b.onchange=e=>{S.year=+e.target.value;if(S.tab==='gerak'){const choices=Object.values(mem.snaps).filter(s=>s.kantor===curSnap().kantor&&s.tahun===S.year).sort((a,b)=>b.bulan-a.bulan);if(choices.length){S.cur=periodKey(choices[0]);recompute()}}render()});
+  root.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{S.cur=b.dataset.m;S.open.clear();recompute();render()});
+  root.querySelectorAll('[data-yr]').forEach(b=>b.onchange=e=>{S.year=+e.target.value;render()});
   root.querySelectorAll('[data-sheet]').forEach(b=>b.onclick=()=>openSheet(b.dataset.sheet,null,'hi'));
   const sc=$('#scrim',root);if(sc)sc.onclick=closeSheet;const scl=$('#sclose',root);if(scl)scl.onclick=closeSheet;
   const sq=$('#sq',root);if(sq)sq.oninput=e=>{S.sq=e.target.value;S.sshow=60;const p=e.target.selectionStart;render();const n=$('#sq');n.focus();n.setSelectionRange(p,p)};
@@ -737,10 +683,8 @@ function bind(){
   const scp=$('#scopy',root);if(scp)scp.onclick=()=>{const l=sheetItems();
     if(S.sheet.k==='lunas'){copy([['Rekening','Nama','AO terakhir','Produk','Plafond','Sisa pokok terakhir','Saldo tercatat pada','Periode lunas/keluar','Coll terakhir','Jatuh tempo','Keterangan']].concat(l.map(x=>{const r=x.l.r;return[r.rek,r.nama,r.ao,r.prod,r.plafond,x.l.unknown?'':x.l.sisa,x.l.sisaPer,x.l.periode,r.coll,r.jt,x.l.note]})).map(r=>r.join('\t')).join('\n'),l.length+' baris disalin. Tempel di Excel.');return}const hd=['Rekening','Nama','AO','Produk','Plafond','Outstanding','Coll','Bln tunggak','Tagihan','Setoran','Jatuh tempo'];
     copy([hd].concat(l.map(x=>{const r=x.i.r;return[r.rek,r.nama,r.ao,r.prod,r.plafond,r.os,r.coll,r.bln,r.tagihan,r.masuk,r.jt]})).map(r=>r.join('\t')).join('\n'),l.length+' baris disalin. Tempel di Excel.')};
-  root.querySelectorAll('[data-coll-toggle]').forEach(b=>b.onclick=()=>{const k=+b.dataset.collToggle;S.collVisible[k]=!S.collVisible[k];render()});
-  const collSearch=$('#collSearch',root);if(collSearch)collSearch.oninput=e=>{S.collSearch=e.target.value;const p=e.target.selectionStart;render();const n=$('#collSearch');if(n){n.focus();n.setSelectionRange(p,p)}};
-  const collFilter=$('#collListFilter',root);if(collFilter)collFilter.onchange=e=>{S.collList=e.target.value;render()};
-  const trend=$('#collLineChart',root);if(trend)trend.addEventListener('click',e=>{const pt=e.target.closest('[data-coll-point]');if(!pt)return;S.cur=pt.dataset.period;S.year=mem.snaps[S.cur].tahun;S.collList=pt.dataset.k;S.open.clear();recompute();render()});
+  const mt=$('#mtr',root);if(mt)mt.querySelectorAll('button').forEach(b=>b.onclick=()=>{S.metric=b.dataset.k;render()});
+  const vw=$('#vw',root);if(vw)vw.querySelectorAll('button').forEach(b=>b.onclick=()=>{S.asTable=b.dataset.k==='t';render()});
   const ch=$('#chart',root);if(ch){const tip=$('#tip');
     const show=e=>{const r=e.target.closest('[data-tip]');if(!r){tip.hidden=true;return}tip.textContent=r.dataset.tip;tip.hidden=false;tip.style.left=Math.min(e.clientX+12,innerWidth-250)+'px';tip.style.top=(e.clientY+14)+'px'};
     ch.addEventListener('pointermove',show);ch.addEventListener('pointerdown',show);ch.addEventListener('pointerleave',()=>tip.hidden=true);
