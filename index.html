@@ -547,20 +547,43 @@ function sheetItems(){
   return l.sort((a,b)=>b.sort-a.sort||R(a).rek.localeCompare(R(b).rek))}
 function sheetRow(x){const r=x.i?x.i.r:x.l.r,open=S.open.has(r.rek);
   return'<div class="item"><button class="row" data-rek="'+r.rek+'" aria-expanded="'+open+'"><span class="dotc '+x.dot+'"></span><span class="who"><b>'+esc(r.nama)+'</b><span><span class="mono">'+r.rek+'</span> · '+esc(r.ao)+'</span></span><span class="amt">'+x.main+'<small>'+esc(x.sub)+'</small></span></button>'+(open?(x.i?detailHtml(x.i):lunasDetail(x.l)):'')+'</div>'}
+function keragaanPeriods(snap){return Object.values(mem.snaps).filter(x=>x.kantor===snap.kantor).sort((a,b)=>(a.tahun*12+a.bulan)-(b.tahun*12+b.bulan))}
 function keragaanChart(snap){
- const periods=Object.values(mem.snaps).filter(x=>x.kantor===snap.kantor).sort((a,b)=>(a.tahun*12+a.bulan)-(b.tahun*12+b.bulan));
- if(!periods.length)return'<p class="muted small">Belum ada data bulanan.</p>';
- const W=Math.max(560,periods.length*62+50),H=245,L=46,R=8,T=20,B=42,pw=W-L-R,ph=H-T-B,max=niceMax(Math.max(1,...periods.map(x=>x.rows.filter(r=>r.prod!=='111').length))),Y=v=>T+ph-v/max*ph,bw=Math.min(34,pw/periods.length*.62);let g='';
+ const periods=keragaanPeriods(snap);if(!periods.length)return'<p class="muted small">Belum ada data bulanan.</p>';
+ S.collSeries=S.collSeries||[true,true,true,true,true];
+ const W=Math.max(560,periods.length*62+56),H=270,L=46,R=10,T=24,B=48,pw=W-L-R,ph=H-T-B;
+ const counts=periods.map(p=>{const c=[0,0,0,0,0];p.rows.filter(r=>r.prod!=='111').forEach(r=>c[Math.min(4,r.coll)]++);return c});
+ const max=niceMax(Math.max(1,...counts.flat())),Y=v=>T+ph-v/max*ph,X=i=>L+pw*(periods.length===1?0.5:i/(periods.length-1));let g='';
  for(let j=0;j<=4;j++){const v=max*j/4;g+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="var(--line)"/><text x="'+(L-7)+'" y="'+(Y(v)+4)+'" text-anchor="end" font-size="10" fill="var(--ink3)">'+nf.format(v)+'</text>'}
- periods.forEach((p,i)=>{const c=[0,0,0,0,0];p.rows.filter(r=>r.prod!=='111').forEach(r=>c[Math.min(4,r.coll)]++);const cx=L+pw/periods.length*(i+.5);let acc=0;
-  c.forEach((v,k)=>{if(!v)return;const y=Y(acc+v),hh=Y(acc)-y;acc+=v;g+='<rect x="'+(cx-bw/2)+'" y="'+y+'" width="'+bw+'" height="'+Math.max(hh,0)+'" rx="2" fill="var(--c'+k+')" data-tip="'+BLN[p.bulan]+' '+p.tahun+' · Coll '+k+': '+nf.format(v)+' rekening"/>'});
-  const label=BLN[p.bulan]+' '+String(p.tahun).slice(-2);g+='<text x="'+cx+'" y="'+(H-17)+'" text-anchor="middle" font-size="10" fill="var(--ink2)">'+esc(label)+'</text>';
- });
- return'<div class="chartbox" style="overflow-x:auto"><svg id="keragaanChart" viewBox="0 0 '+W+' '+H+'" style="min-width:'+Math.min(W,560)+'px" role="img" aria-label="Pergerakan jumlah rekening Coll 0 sampai 4 untuk semua bulan yang diunggah">'+g+'</svg><div class="legend">'+[0,1,2,3,4].map(k=>'<span><i style="background:var(--c'+k+')"></i>Coll '+k+'</span>').join('')+'</div></div>'
+ periods.forEach((p,i)=>g+='<text x="'+X(i)+'" y="'+(H-17)+'" text-anchor="middle" font-size="10" fill="var(--ink2)">'+MON[p.bulan-1]+' '+String(p.tahun).slice(-2)+'</text>');
+ for(let k=0;k<5;k++){if(!S.collSeries[k])continue;const pts=counts.map((c,i)=>X(i)+','+Y(c[k])).join(' ');g+='<polyline points="'+pts+'" fill="none" stroke="var(--c'+k+')" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>';counts.forEach((c,i)=>g+='<circle cx="'+X(i)+'" cy="'+Y(c[k])+'" r="4" fill="var(--c'+k+')" stroke="var(--surface)" stroke-width="1.5" data-tip="'+BLN[periods[i].bulan]+' '+periods[i].tahun+' · Coll '+k+': '+nf.format(c[k])+' rekening"/>')}
+ const filters='<div class="actions" style="margin:8px 0">'+[0,1,2,3,4].map(k=>'<button class="btn sm" data-coll-series="'+k+'" aria-pressed="'+S.collSeries[k]+'" style="border-color:var(--c'+k+');opacity:'+(S.collSeries[k]?1:.48)+'"><i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--c'+k+');margin-right:6px"></i>Coll '+k+'</button>').join('')+'</div>';
+ return filters+'<div class="chartbox" style="overflow-x:auto"><svg id="keragaanChart" viewBox="0 0 '+W+' '+H+'" style="min-width:'+Math.min(W,560)+'px" role="img" aria-label="Tren jumlah rekening untuk Coll 0 sampai 4 pada seluruh bulan yang diunggah">'+g+'</svg></div>'
+}
+function normNama(n){return String(n||'').trim().toLocaleUpperCase('id').replace(/\s+/g,' ')}
+function keragaanTransitions(snap){
+ const periods=keragaanPeriods(snap);if(periods.length<2)return{label:'',rows:[]};
+ let pos=periods.findIndex(p=>periodKey(p)===S.kerPeriod);if(pos<1)pos=periods.findIndex(p=>periodKey(p)===periodKey(snap));if(pos<1)pos=periods.length-1;
+ const prev=periods[pos-1],cur=periods[pos],currentByRek=new Map(cur.rows.filter(r=>r.prod!=='111').map(r=>[String(r.rek),r]));
+ const ident=r=>String(r.rek||'').trim()+'|'+normNama(r.nama),currentById=new Map(cur.rows.filter(r=>r.prod!=='111').map(r=>[ident(r),r])),rows=[];
+ for(const old of prev.rows.filter(r=>r.prod!=='111')){
+  const exact=currentById.get(ident(old)),sameNo=currentByRek.get(String(old.rek));
+  if(exact){if(old.os>0&&exact.os<=0)rows.push({rek:old.rek,nama:old.nama,from:old.coll,to:'-',status:'Lunas · saldo 0 tercatat',detail:rpc(old.os)+' → Rp 0'});else if(old.coll!==exact.coll)rows.push({rek:old.rek,nama:old.nama,from:old.coll,to:exact.coll,status:(exact.coll>old.coll?'Naik Coll ':'Turun Coll ')+old.coll+' → '+exact.coll,detail:'Nama dan nomor rekening cocok · '+rpc(exact.os)});continue}
+  if(sameNo){rows.push({rek:old.rek,nama:old.nama,from:old.coll,to:'-',status:'Nama berbeda pada nomor rekening yang sama',detail:'Di laporan baru: '+sameNo.nama+' · perlu verifikasi'});continue}
+  let later=null,laterPeriod=null;for(let j=pos+1;j<periods.length;j++){later=periods[j].rows.find(r=>r.prod!=='111'&&ident(r)===ident(old));if(later){laterPeriod=periods[j];break}}
+  if(later&&later.os<=0)rows.push({rek:old.rek,nama:old.nama,from:old.coll,to:'-',status:'Lunas · saldo 0 tercatat kemudian',detail:'Saldo 0 pada '+BLN[laterPeriod.bulan]+' · '+rpc(old.os)});
+  else if(later)rows.push({rek:old.rek,nama:old.nama,from:old.coll,to:'-',status:'Tidak tercantum sementara',detail:'Muncul kembali di laporan berikutnya · '+rpc(old.os)});
+  else rows.push({rek:old.rek,nama:old.nama,from:old.coll,to:'-',status:'Tidak ada di laporan · status lunas belum terkonfirmasi',detail:'Saldo terakhir '+rpc(old.os)+' · cocokkan bukti pelunasan'})
+ }
+ if(S.sheet.p!=null) return{label:BLN[prev.bulan]+' '+prev.tahun+' → '+BLN[cur.bulan]+' '+cur.tahun,rows:rows.filter(x=>x.from===S.sheet.p)};
+ return{label:BLN[prev.bulan]+' '+prev.tahun+' → '+BLN[cur.bulan]+' '+cur.tahun,rows}
 }
 function keragaanOverview(snap){
  const counts=[0,0,0,0,0];for(const r of A.loans)counts[Math.min(4,r.coll)]++;
- return'<div class="card"><h2>Keragaan Coll per bulan · '+esc(snap.nama)+'</h2><p class="muted small" style="margin-bottom:8px">Batang menunjukkan jumlah rekening pada tiap Coll untuk seluruh periode yang sudah diunggah. Pilih Coll untuk menyaring daftar rekening.</p>'+keragaanChart(snap)+'<div class="mgrid" style="margin-top:10px"><button class="mchip '+(S.sheet.p==null?'sel':'')+'" data-kcoll="all"><b>Semua Coll</b><span>'+nf.format(A.loans.length)+' rekening</span></button>'+counts.map((n,k)=>'<button class="mchip '+(S.sheet.p===k?'sel':'')+'" data-kcoll="'+k+'"><b>Coll '+k+'</b><span>'+nf.format(n)+' rekening · '+rpc(A.loans.filter(r=>r.coll===k).reduce((a,r)=>a+r.os,0))+'</span></button>').join('')+'</div></div>'
+ const periods=keragaanPeriods(snap),choices=periods.slice(1);let selected=S.kerPeriod||periodKey(snap);if(!choices.some(p=>periodKey(p)===selected))selected=periodKey(choices[choices.length-1]||snap);S.kerPeriod=selected;
+ const changes=keragaanTransitions(snap),opts=choices.map(p=>'<option value="'+esc(periodKey(p))+'"'+(periodKey(p)===selected?' selected':'')+'>'+BLN[p.bulan]+' '+p.tahun+'</option>').join('');
+ const table=changes.rows.length?'<div class="tblbox"><table><thead><tr><th>Rekening</th><th>Coll awal</th><th>Perubahan</th><th>Keterangan</th></tr></thead><tbody>'+changes.rows.map(x=>'<tr><td>'+esc(x.nama)+'<br><span class="mono small">'+esc(x.rek)+'</span></td><td>Coll '+esc(x.from)+'</td><td>'+esc(x.status)+'</td><td>'+esc(x.detail)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="muted small">Tidak ada perpindahan atau rekening Coll yang hilang pada perbandingan ini.</p>';
+ return'<div class="card"><h2>Keragaan Coll per bulan · '+esc(snap.nama)+'</h2><p class="muted small" style="margin-bottom:8px">Pilih garis Coll 0–4 untuk menampilkan atau menyembunyikan tren pada seluruh bulan yang diunggah.</p>'+keragaanChart(snap)+'<div class="mgrid" style="margin-top:10px"><button class="mchip '+(S.sheet.p==null?'sel':'')+'" data-kcoll="all"><b>Semua Coll</b><span>'+nf.format(A.loans.length)+' rekening</span></button>'+counts.map((n,k)=>'<button class="mchip '+(S.sheet.p===k?'sel':'')+'" data-kcoll="'+k+'"><b>Coll '+k+'</b><span>'+nf.format(n)+' rekening · '+rpc(A.loans.filter(r=>r.coll===k).reduce((a,r)=>a+r.os,0))+'</span></button>').join('')+'</div><div style="margin-top:14px"><h2>Perpindahan dan Coll yang tidak muncul</h2><label class="small muted">Bandingkan sampai bulan <select id="keragaanPeriod">'+opts+'</select></label><p class="small muted" style="margin:6px 0">'+esc(changes.label||'Perlu minimal dua periode untuk membandingkan')+'</p>'+table+'</div></div>'
 }
 function sheetHtml(){
   if(!S.sheet)return'';
@@ -727,6 +750,8 @@ function bind(){
   root.querySelectorAll('[data-yr]').forEach(b=>b.onchange=e=>{S.year=+e.target.value;render()});
   root.querySelectorAll('[data-sheet]').forEach(b=>b.onclick=()=>openSheet(b.dataset.sheet,null,'hi'));
   root.querySelectorAll('[data-kcoll]').forEach(b=>b.onclick=()=>{S.sheet.p=b.dataset.kcoll==='all'?null:+b.dataset.kcoll;S.sshow=60;render()});
+  root.querySelectorAll('[data-coll-series]').forEach(b=>b.onclick=()=>{S.collSeries=S.collSeries||[true,true,true,true,true];const k=+b.dataset.collSeries;S.collSeries[k]=!S.collSeries[k];render()});
+  const kp=$('#keragaanPeriod',root);if(kp)kp.onchange=e=>{S.kerPeriod=e.target.value;render()};
   const kchart=$('#keragaanChart',root);if(kchart){const tip=$('#tip');kchart.addEventListener('pointermove',e=>{const r=e.target.closest('[data-tip]');if(!r){tip.hidden=true;return}tip.textContent=r.dataset.tip;tip.hidden=false;tip.style.left=Math.min(e.clientX+12,innerWidth-250)+'px';tip.style.top=(e.clientY+14)+'px'});kchart.addEventListener('pointerleave',()=>tip.hidden=true)}
   const sc=$('#scrim',root);if(sc)sc.onclick=closeSheet;const scl=$('#sclose',root);if(scl)scl.onclick=closeSheet;
   const sq=$('#sq',root);if(sq)sq.oninput=e=>{S.sq=e.target.value;S.sshow=60;const p=e.target.selectionStart;render();const n=$('#sq');n.focus();n.setSelectionRange(p,p)};
