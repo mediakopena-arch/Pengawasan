@@ -567,7 +567,7 @@ function tabGerak(){
   let h='<div class="actions"><label class="muted small">Tahun <select id="yr" data-yr aria-label="Tahun">'+years.map(v=>'<option'+(v===y?' selected':'')+'>'+v+'</option>').join('')+'</select></label>'+
    '<span class="seg" id="mtr"><button data-k="n" aria-pressed="'+(metric==='n')+'">Jumlah rekening</button><button data-k="os" aria-pressed="'+(metric==='os')+'">Outstanding</button></span>'+
    '<span class="seg" id="vw"><button data-k="g" aria-pressed="'+(!S.asTable)+'">Diagram</button><button data-k="t" aria-pressed="'+S.asTable+'">Tabel</button></span></div>';
-  h+='<div class="mgrid">'+MON.map((n,i)=>{const d=data[i];return d?'<button class="mchip has'+(d.s===snap?' sel':'')+'" data-m="'+esc(periodKey(d.s))+'"><b>'+n+'</b><span>'+nf.format(d.s.rows.filter(r=>r.prod!=='111').length)+' rek.</span></button>':'<div class="mchip empty"><b>'+n+'</b><span>belum ada</span></div>'}).join('')+'</div>';
+  h+='<div class="card"><h2>Pilih bulan laporan</h2><p class="muted small">Pilih bulan untuk melihat perpindahan Coll dibanding periode sebelumnya.</p><div class="mgrid">'+MON.map((n,i)=>{const d=data[i];return d?'<button class="mchip has'+(d.s===snap?' sel':'')+'" data-m="'+esc(periodKey(d.s))+'"><b>'+n+'</b><span>'+nf.format(d.s.rows.filter(r=>r.prod!=='111').length)+' rek.</span></button>':'<div class="mchip empty"><b>'+n+'</b><span>belum ada</span></div>'}).join('')+'</div></div>';
   if(S.asTable){
     h+='<div class="tblbox"><table><thead><tr><th>Bulan</th>'+[0,1,2,3,4].map(k=>'<th>Coll '+k+'</th>').join('')+'<th>Total</th></tr></thead><tbody>'+
      data.map((d,i)=>d?'<tr><td>'+BLN[i+1]+'</td>'+d.c.map(v=>'<td>'+fmt(v)+'</td>').join('')+'<td>'+fmt(d.t)+'</td></tr>':'').join('')+'</tbody></table></div>'}
@@ -581,9 +581,14 @@ function tabGerak(){
   for(const r of c.hilang)M[Math.min(4,r.coll)][5]++;
   let wor=0,bet=0,same=0;for(let a=0;a<5;a++)for(let b=0;b<5;b++){if(b>a)wor+=M[a][b];else if(b<a)bet+=M[a][b];else same+=M[a][b]}
   const lab=['Coll 0','Coll 1','Coll 2','Coll 3','Coll 4','Baru'];
-  h+='<div class="card"><h2>Perpindahan Coll: '+BLN[c.prev.bulan]+' '+c.prev.tahun+' → '+BLN[snap.bulan]+' '+snap.tahun+'</h2><p class="muted small" style="margin-bottom:8px">Baris = posisi periode sebelumnya, kolom = posisi sekarang. Sel merah = naik ke Coll lebih tinggi. Memburuk <b>'+wor+'</b> · membaik <b>'+bet+'</b> · tetap <b>'+same+'</b> rekening.</p>'+
+  h+='<div class="card"><h2>Diagram perpindahan Coll: '+BLN[c.prev.bulan]+' '+c.prev.tahun+' → '+BLN[snap.bulan]+' '+snap.tahun+'</h2><p class="muted small" style="margin-bottom:8px">Baris = posisi periode sebelumnya, kolom = posisi sekarang. Sel merah = naik ke Coll lebih tinggi. Memburuk <b>'+wor+'</b> · membaik <b>'+bet+'</b> · tetap <b>'+same+'</b> rekening.</p>'+
    '<div class="tblbox mig"><table><thead><tr><th>Dari \\ Ke</th>'+[0,1,2,3,4].map(k=>'<th>Coll '+k+'</th>').join('')+'<th>Hilang</th></tr></thead><tbody>'+
    M.map((row,a)=>'<tr><td>'+lab[a]+'</td>'+row.map((v,b)=>'<td class="'+(!v?'z':(a<5&&b<5&&b>a)?'w':'')+'">'+v+'</td>').join('')+'</tr>').join('')+'</tbody></table></div></div>';
+  const byRek=new Map(A.items.map(i=>[i.r.rek,i])),up=[],down=[];
+  for(const r of A.loans){const old=pk.get(r.rek);if(!old||old.coll===r.coll)continue;const item=byRek.get(r.rek);if(!item)continue;
+    const move={item,from:old.coll,to:r.coll};(r.coll>old.coll?up:down).push(move)}
+  const movementCard=(title,moves,rising)=>'<div class="card"><h2>'+title+' ('+moves.length+')</h2>'+(moves.length?'<div class="list">'+moves.sort((a,b)=>Math.abs(b.to-b.from)-Math.abs(a.to-a.from)).map(m=>{const i=m.item,r=i.r,open=S.open.has(r.rek);return'<div class="item"><button class="row" data-rek="'+esc(r.rek)+'" aria-expanded="'+open+'"><span class="sev '+(rising?'hi':'lo')+'">'+(rising?'Naik':'Turun')+'</span><span class="who"><b>'+esc(r.nama)+'</b><span class="mono">'+esc(r.rek)+'</span></span><span class="amt">Coll '+m.from+' → '+m.to+'<small>'+esc(r.ao)+' · '+rpc(r.os)+'</small></span></button>'+(open?detailHtml(i):'')+'</div>'}).join('')+'</div>':'<p class="muted small">Tidak ada rekening.</p>')+'</div>';
+  h+='<div class="cols">'+movementCard('Coll naik / memburuk',up,true)+movementCard('Coll turun / membaik',down,false)+'</div>';
   return h+rekapHtml()}
 const plabel=z=>MON[z.bulan-1]+' '+z.tahun;
 function mutasiData(){
