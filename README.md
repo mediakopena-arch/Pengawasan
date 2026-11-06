@@ -14,23 +14,23 @@ Halaman utama dapat dibuka kembali saat offline setelah kunjungan pertama. Fitur
 
 Situs GitHub Pages tidak dapat menyimpan rahasia dengan aman. Backend di folder `worker` menjalankan permintaan Gemini dan menyimpan API key sebagai Cloudflare Worker Secret. Pengguna aplikasi tidak perlu memasukkan API key.
 
-1. Buat/login ke akun Cloudflare dan siapkan Wrangler pada komputer atau Termux yang memiliki Node.js/npm.
-2. Dari terminal, masuk ke folder `worker`, lalu jalankan:
+### Jika memakai Termux di Android
 
-   ```sh
-   npx wrangler login
-   npx wrangler deploy
-   npx wrangler secret put GEMINI_API_KEY
-   ```
+Wrangler saat ini tidak dapat berjalan di Android ARM64, sehingga perintah `npx wrangler ...` gagal di Termux. Gunakan Cloudflare Dashboard atau jalankan Wrangler dari komputer.
 
-3. Saat diminta, tempel API key Gemini admin ke terminal. Jangan masukkan key ke file proyek atau chat. Wrangler akan menampilkan alamat Worker setelah deploy.
-4. Isi variabel `window.PENGAWASAN_AI_API` di `ai-config.js` dengan alamat tersebut, tanpa `/analyze`. Contoh:
+### Deploy lewat Cloudflare Dashboard
+
+1. Buka Cloudflare Dashboard → **Workers & Pages** → **Create application** → **Create Worker**. Beri nama `pengawasan-ai`, lalu deploy Worker baru.
+2. Buka Worker tersebut, pilih **Edit code**, ganti seluruh kode contoh dengan isi file `worker/index.js`, lalu **Deploy**.
+3. Buka **Settings** → **Variables and Secrets** → **Add** → pilih tipe **Secret**. Isi nama `GEMINI_API_KEY`, tempel API key Gemini admin sebagai nilainya, lalu simpan/deploy. Jangan tempel API key ke chat atau file aplikasi.
+4. Salin alamat Worker yang berakhiran `.workers.dev`.
+5. Isi `window.PENGAWASAN_AI_API` di `ai-config.js` dengan alamat itu, tanpa `/analyze`. Contoh:
 
    ```js
    window.PENGAWASAN_AI_API = "https://pengawasan-ai.nama-akun.workers.dev";
    ```
 
-5. Unggah/push perubahan `ai-config.js` dan file aplikasi ke repositori GitHub Pages. Setelah situs terbit ulang, pengguna membuka tab **Analisa AI**, mengunggah laporan mereka seperti biasa, mencentang persetujuan pengiriman angka agregat, lalu menekan **Buat analisa AI**.
+6. Terbitkan ulang file aplikasi di GitHub Pages. Setelah itu pengguna membuka tab **Analisa AI**, memuat laporan mereka seperti biasa, menyetujui pengiriman angka agregat, lalu menekan **Buat analisa AI**.
 
 ### Batasi penggunaan
 
