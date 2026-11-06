@@ -1,5 +1,5 @@
-const CACHE = "pengawasan-pwa-v2";
-const APP_SHELL = ["./", "./index.html", "./manifest.webmanifest", "./ai-config.js", "./icons/icon.svg"];
+const CACHE = "pengawasan-pwa-v3";
+const APP_SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icons/icon.svg"];
 
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(APP_SHELL)));

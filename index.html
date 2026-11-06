@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="Dashboard analisis tagihan cabang."><meta name="theme-color" content="#eaf2ff"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pengawasan"><link rel="manifest" href="manifest.webmanifest"><script src="ai-config.js"></script><link rel="icon" href="icons/icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="icons/icon.svg"><title>Pelacak Tagihan Cabang</title><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="Dashboard analisis tagihan cabang."><meta name="theme-color" content="#eaf2ff"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="Pengawasan"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icons/icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="icons/icon.svg"><title>Pelacak Tagihan Cabang</title><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Nunito:wght@400;600;700;800&display=swap">
 <style>
@@ -195,7 +195,6 @@ button.kpi:active{transform:translateY(1px)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 .tabs{flex-wrap:wrap;overflow:visible}
 .sheet-body .note{font-size:13px;color:var(--ink2)}
-.aiout{white-space:pre-wrap;overflow-wrap:anywhere;font:14px/1.6 var(--font);margin:0}
 </style>
 
 <div class="wrap" id="app"></div>
@@ -354,7 +353,7 @@ function analyze(snap){
   return {items:out,chg,loans,printDay}}
 
 /* ---------- state ---------- */
-let S={mut:'baru',queue:[],year:0,metric:'n',asTable:false,cur:null,tab:'ringkas',sheet:null,sq:'',sao:'',sshow:60,open:new Set(),f:{q:'',sev:'',cat:'',ao:'',prod:'',sort:'score',show:50},err:'',busy:false,aiText:'',aiError:'',aiBusy:false};
+let S={mut:'baru',queue:[],year:0,metric:'n',asTable:false,cur:null,tab:'ringkas',sheet:null,sq:'',sao:'',sshow:60,open:new Set(),f:{q:'',sev:'',cat:'',ao:'',prod:'',sort:'score',show:50},err:'',busy:false};
 let A=null;
 function curSnap(){const k=S.cur&&mem.snaps[S.cur];return k||null}
 function pickLatest(){const ks=Object.keys(mem.snaps).sort((a,b)=>{const x=mem.snaps[a],y=mem.snaps[b];return(y.tahun*12+y.bulan)-(x.tahun*12+x.bulan)});S.cur=ks[0]||null}
@@ -401,7 +400,7 @@ const GL={
 function icon(name,color,size){const c=IC[color]||IC.blue;size=size||40;
   return'<svg class="ic" width="'+size+'" height="'+size+'" viewBox="0 0 48 48" aria-hidden="true"><rect x="3" y="7" width="42" height="38" rx="13" fill="'+c[2]+'"/><rect x="3" y="3" width="42" height="38" rx="13" fill="url(#g-'+color+')"/><path d="M9 18c0-8 5-11.5 15-11.5S39 10 39 18c-8-5-22-5-30 0z" fill="#fff" opacity=".32"/><g transform="translate(12 9)" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" filter="url(#sh)">'+(GL[name]||'')+'</g></svg>'}
 const DEFS='<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>'+Object.entries(IC).map(([k,c])=>'<linearGradient id="g-'+k+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+c[0]+'"/><stop offset="1" stop-color="'+c[1]+'"/></linearGradient>').join('')+'<filter id="sh" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="1.4" stdDeviation=".9" flood-color="#000" flood-opacity=".3"/></filter></defs></svg>';
-const TABS=[['ringkas','Ringkasan','money','green'],['temuan','Temuan','search','pink'],['gerak','Pergerakan','chart','blue'],['ao','Per AO','users','purple'],['ai','Analisa AI','spark','purple'],['data','Data','sliders','yellow']];
+const TABS=[['ringkas','Ringkasan','money','green'],['temuan','Temuan','search','pink'],['gerak','Pergerakan','chart','blue'],['ao','Per AO','users','purple'],['data','Data','sliders','yellow']];
 
 /* ---------- render ---------- */
 function histHtml(rek){
@@ -427,7 +426,7 @@ function render(){
   h+=pendingHtml();
   if(!storeOk)h+='<p class="small err">Browser tidak mengizinkan penyimpanan. Riwayat bulanan hilang saat halaman ditutup.</p>';
   if(!snap){
-    h+='<div class="drop" id="drop"><p><b>Seret file .XLS ke sini</b> atau pilih dari tombol di atas.</p><p class="muted small">File dan identitas rekening diproses di browser. Hanya jika Anda memilih Analisa AI dan menyetujuinya, angka agregat dikirim ke Gemini.</p></div>'+
+    h+='<div class="drop" id="drop"><p><b>Seret file .XLS ke sini</b> atau pilih dari tombol di atas.</p><p class="muted small">File dan identitas rekening diproses di browser.</p></div>'+
     '<div class="cols">'+
     [['Tertagih dan tidak tertagih','Daftar nama yang sudah menyetor dan yang belum. Ketuk nama untuk melihat keterangan dan riwayat bulanannya.','money','green'],
      ['Baru berhenti bayar','Rekening yang bulan lalu tidak menunggak, tetapi bulan ini tagihannya jatuh tempo dan belum ada setoran.','cross','red'],
@@ -449,7 +448,7 @@ function render(){
    tile('baru','swap','purple','Perilaku baru',nf.format(baru.length),'berhenti bayar atau cair baru')+'</div>';
   if(td.later.length)h+='<button class="link" data-sheet="later">'+td.later.length+' rekening belum jatuh tempo per tgl '+A.printDay+' ›</button>';
   h+='<div class="tabs" role="tablist">'+TABS.map(t=>'<button class="tab" role="tab" data-tab="'+t[0]+'" aria-selected="'+(S.tab===t[0])+'">'+icon(t[2],t[3],26)+t[1]+'</button>').join('')+'</div>';
-  h+=S.tab==='ringkas'?tabRingkas():S.tab==='temuan'?tabTemuan():S.tab==='gerak'?tabGerak():S.tab==='ao'?tabAO():S.tab==='ai'?tabAI():tabRiwayat()+tabAturan();
+  h+=S.tab==='ringkas'?tabRingkas():S.tab==='temuan'?tabTemuan():S.tab==='gerak'?tabGerak():S.tab==='ao'?tabAO():tabRiwayat()+tabAturan();
   h+=sheetHtml();
   root.innerHTML=h;document.body.classList.toggle('lock',!!S.sheet);bind();
   const nb=$('.sheet-body');if(nb)nb.scrollTop=sTop}
@@ -531,38 +530,6 @@ function sheetHtml(){
    '<div class="sheet-body">'+(l.length?'<div class="list">'+shown.map(sheetRow).join('')+'</div>'+(l.length>shown.length?'<button class="btn" id="smore">Tampilkan '+Math.min(60,l.length-shown.length)+' lagi</button>':''):'<div class="card muted">'+(A.chg||!['new','lunas'].includes(S.sheet.k)?'Tidak ada rekening.':'Unggah periode sebelumnya untuk membandingkan.')+'</div>')+'</div></section>'}
 function openSheet(k,p,sev){S.sheet={k,p,sev:sev||'hi'};S.sq='';S.sao='';S.sshow=60;S.open.clear();render();const c=$('#sclose');if(c)c.focus({preventScroll:true})}
 function closeSheet(){S.sheet=null;render()}
-function aiSummary(){
-  const coll=[0,1,2,3,4].map(k=>A.loans.filter(r=>r.coll===k).length);
-  const hi=A.items.filter(i=>i.sev==='hi').length,mid=A.items.filter(i=>i.sev==='mid').length,lo=A.items.filter(i=>i.sev==='lo').length;
-  const due=A.items.reduce((n,i)=>n+i.r.ta+(i.duePassed?i.r.tagihan:0),0);
-  const paid=A.items.reduce((n,i)=>n+i.r.masuk,0);
-  const npf=A.loans.filter(r=>r.coll>=3), outstanding=A.loans.reduce((n,r)=>n+r.os,0);
-  const findings={};for(const i of A.items)for(const f of i.f)findings[RULES[f.id].label]=(findings[RULES[f.id].label]||0)+1;
-  const out={periode:BLN[curSnap().bulan]+' '+curSnap().tahun,rekening:A.loans.length,outstanding_total:Math.round(outstanding),distribusi_kolektibilitas:Object.fromEntries(coll.map((n,k)=>['coll_'+k,n])),temuan_risiko:{tinggi:hi,sedang:mid,rendah:lo},saldo_coll_3_4:{rekening:npf.length,outstanding:Math.round(npf.reduce((n,r)=>n+r.os,0))},rasio_setoran_terhadap_kewajiban_persen:due?Math.round(paid/due*1000)/10:null,jenis_temuan:findings};
-  if(A.chg){const prev=A.chg.prev.rows.filter(r=>r.prod!=='111');const oldNpf=prev.filter(r=>r.coll>=3);out.perbandingan_periode_sebelumnya={periode:BLN[A.chg.prev.bulan]+' '+A.chg.prev.tahun,rekening_kol_3_4:oldNpf.length,outstanding_kol_3_4:Math.round(oldNpf.reduce((n,r)=>n+r.os,0))}}
-  return out
-}
-function tabAI(){
-  return '<div class="cols"><div class="card"><h2>Analisa AI (Gemini Flash)</h2><p class="muted" style="margin-bottom:10px">Minta AI merangkum pola risiko, perubahan periode, dan saran pemeriksaan dari angka ringkasan.</p>'+
-   '<p class="small muted" style="margin-bottom:10px">API key dikelola admin di backend dan tidak disimpan di HP pengguna.</p>'+
-   '<label class="chk small" style="margin-bottom:12px"><input type="checkbox" id="aiConsent"><span>Saya setuju mengirim <b>angka agregat</b> periode ini ke Google Gemini. Nama nasabah, nomor rekening, nama AO, dan rincian per rekening tidak ikut dikirim. Data pada Gemini API gratis dapat digunakan Google untuk meningkatkan produknya.</span></label>'+
-   '<button class="btn pri" id="aiRun" '+(S.aiBusy||!window.PENGAWASAN_AI_API?'disabled':'')+'>'+(S.aiBusy?'Menganalisis…':'Buat analisa AI')+'</button>'+
-   (!window.PENGAWASAN_AI_API?'<p class="small err" style="margin-top:8px">Backend AI belum dikonfigurasi. Admin perlu mengatur URL Worker di ai-config.js.</p>':'')+
-   '<p class="small muted" style="margin-top:10px">Kuota gratis memiliki batas dan dapat berubah. Jangan gunakan bila angka agregat ini bersifat rahasia. AI hanya memberi bahan telaah, bukan keputusan kredit atau bukti pelanggaran. <a href="https://ai.google.dev/gemini-api/docs/pricing" target="_blank" rel="noopener">Info kuota dan privasi Gemini</a>.</p></div>'+
-   (S.aiError?'<div class="card err" role="alert">'+esc(S.aiError)+'</div>':S.aiText?'<div class="card"><h2>Hasil analisa</h2><p class="aiout">'+esc(S.aiText)+'</p></div>':'<div class="card"><h2>Ringkasan yang akan dikirim</h2><p class="muted small">Hanya angka agregat: jumlah rekening per kolektibilitas, total outstanding, jumlah temuan per jenis, dan rasio setoran. Tidak ada baris rekening atau identitas.</p></div>')+'</div>'
-}
-async function runAI(){
-  const endpoint=String(window.PENGAWASAN_AI_API||'').trim().replace(/\/$/,'');
-  if(!endpoint){S.aiError='Backend AI belum dikonfigurasi.';render();return}
-  S.aiBusy=true;S.aiError='';render();
-  try{
-    const res=await fetch(endpoint+'/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({summary:aiSummary()})});
-    const data=await res.json();if(!res.ok)throw new Error(data.error||'Permintaan gagal ('+res.status+'). Coba lagi nanti.');
-    if(!data.text)throw new Error('AI tidak mengembalikan teks. Coba lagi.');S.aiText=data.text;
-  }catch(e){S.aiError=e.message||'Gagal menghubungi backend AI. Periksa koneksi.'}
-  finally{S.aiBusy=false;render()}
-}
-
 function tabRingkas(){
   const sn=curSnap(),y=S.year||sn.tahun,years=[...new Set(Object.values(mem.snaps).filter(s=>s.kantor===sn.kantor).map(s=>s.tahun).concat([y]))].sort();
   return'<div class="card chart"><div class="hd"><h2>Sebaran Coll per bulan</h2><select id="yr" data-yr aria-label="Tahun">'+years.map(v=>'<option'+(v===y?' selected':'')+'>'+v+'</option>').join('')+'</select></div>'+collChart(sn,y,'n')+'<p class="small muted">Ketuk bagian batang untuk melihat nama rekeningnya.</p></div>'}
@@ -712,7 +679,6 @@ function bind(){
     ch.addEventListener('click',e=>{const r=e.target.closest('[data-per]');if(!r)return;tip.hidden=true;S.cur=r.dataset.per;recompute();openSheet('coll',+r.dataset.k)})}
   const sel=$('#snapsel',root);if(sel)sel.onchange=e=>{S.cur=e.target.value;S.open.clear();S.f.show=50;recompute();render()};
   root.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{S.tab=b.dataset.tab;render()});
-  const air=$('#aiRun',root);if(air)air.onclick=()=>{const c=$('#aiConsent',root);if(!c||!c.checked){S.aiError='Centang persetujuan pengiriman ringkasan agregat terlebih dahulu.';render();return}runAI()};
   root.querySelectorAll('.row').forEach(b=>b.onclick=()=>{const k=b.dataset.rek;S.open.has(k)?S.open.delete(k):S.open.add(k);render();const e=root.querySelector('.row[data-rek="'+k+'"]');if(e)e.focus({preventScroll:true})});
   const q=$('#q',root);if(q)q.oninput=e=>{S.f.q=e.target.value;S.f.show=50;const p=e.target.selectionStart;render();const n=$('#q');n.focus();n.setSelectionRange(p,p)};
   [['fsev','sev'],['fcat','cat'],['fao','ao'],['fprod','prod'],['fsort','sort']].forEach(([id,k])=>{const e=$('#'+id,root);if(e)e.onchange=ev=>{S.f[k]=ev.target.value;S.f.show=50;render()}});
