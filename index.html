@@ -601,10 +601,23 @@ function mutasiData(){
     if(r.plafond>=100e6)n.push('Plafond besar');
     if(i.f.some(x=>x.id==='MIRIP'))n.push('Nama mirip petugas');
     return{i,note:n.join(' · '),sev:i.sev}});
-  const cands=[];
-  for(const i of A.items){const r=i.r,o=pi.get(r.rek);if(r.os<=0&&r.plafond>0&&o&&o.os>0)cands.push(r.rek)}
-  for(const o of c.hilang)cands.push(o.rek);
-  const lunas=cands.map(rek=>{
+  const cands=new Set();
+  for(const i of A.items){const r=i.r,o=pi.get(r.rek);if(r.os<=0&&r.plafond>0&&o&&o.os>0)cands.add(r.rek)}
+  for(const o of c.hilang)cands.add(o.rek);
+  const lunasKey=(r,sisa)=>[String(r.nama||'').trim().toLocaleUpperCase('id').replace(/\s+/g,' '),String(r.rek||'').trim(),Math.round(Number(sisa)||0)].join('|');
+  const pernahLunas=new Set();
+  for(let end=1;end<asc.length-1;end++){
+    const before=asc[end-1],after=asc[end],beforeIndex=idx(before),afterIndex=idx(after),previousCandidates=new Set();
+    for(const r of after.rows){const old=beforeIndex.get(r.rek);if(r.prod!=='111'&&r.os<=0&&old&&old.os>0)previousCandidates.add(r.rek)}
+    for(const r of before.rows)if(r.prod!=='111'&&!afterIndex.has(r.rek))previousCandidates.add(r.rek);
+    for(const rek of previousCandidates){
+      const seq=asc.slice(0,end+1).map(z=>({z,r:idx(z).get(rek)}));
+      let li=-1;for(let k=seq.length-1;k>=0;k--){if(seq[k].r&&seq[k].r.os>0){li=k;break}}
+      const last=li>=0?seq[li].r:seq.slice().reverse().find(q=>q.r)?.r;
+      if(last)pernahLunas.add(lunasKey(last,li>=0?seq[li].r.os:0));
+    }
+  }
+  const lunas=[...cands].map(rek=>{
     const seq=asc.map(z=>({z,r:idx(z).get(rek)}));
     let li=-1;for(let k=seq.length-1;k>=0;k--){if(seq[k].r&&seq[k].r.os>0){li=k;break}}
     const base=li>=0?seq[li].r:seq.slice().reverse().find(q=>q.r).r;
@@ -618,7 +631,10 @@ function mutasiData(){
     else if(jt&&jt<=exitEnd){sev='lo';note='Hilang dari laporan setelah jatuh tempo. Kemungkinan lunas.'}
     else{sev='mid';note='Hilang dari laporan sebelum jatuh tempo ('+base.jt+') tanpa saldo 0 tercatat. Cek bukti pelunasan.'}
     if(li<0)note+=' Saldo sebelum pelunasan tidak ada di riwayat yang diunggah.';
-    return{r:base,sisa,sisaPer,periode:plabel(exitS),zero:!!zero,sev,note,unknown:li<0}});
+    return{r:base,sisa,sisaPer,periode:plabel(exitS),zero:!!zero,sev,note,unknown:li<0}}).filter((item,i,all)=>{
+      const key=lunasKey(item.r,item.sisa);
+      return !pernahLunas.has(key)&&all.findIndex(other=>lunasKey(other.r,other.sisa)===key)===i;
+    });
   return{baru,lunas}}
 function lunasDetail(l){const r=l.r;
   return'<div class="detail"><dl class="kv">'+[['Produk',r.prod+' '+r.prodNama.replace(/^\d+\s*/,'')],['Plafond',rp(r.plafond)],['Sisa pokok terakhir',l.unknown?'tidak diketahui':rp(l.sisa)],['Saldo terakhir tercatat',l.sisaPer||'-'],['Periode lunas atau keluar',l.periode],['Coll terakhir',r.coll],['Jatuh tempo',r.jt],['AO terakhir',r.ao]].map(x=>'<dt>'+x[0]+'</dt><dd>'+esc(x[1])+'</dd>').join('')+'</dl><div><h2>Keterangan</h2><p class="note">'+esc(l.note)+'</p></div>'+histHtml(r.rek)+'</div>'}
