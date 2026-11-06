@@ -442,7 +442,7 @@ function render(){
      ['Sebaran Coll per bulan','Unggah laporan beberapa bulan untuk melihat grafik Coll 0–4 dan perpindahannya.','chart','blue']].map(x=>'<div class="card" style="display:flex;gap:14px;align-items:flex-start">'+icon(x[2],x[3],44)+'<div><h2>'+x[0]+'</h2><p class="muted">'+x[1]+'</p></div></div>').join('')+'</div>';
     root.innerHTML=h;bind();return}
   const td=tagData(),n=td.ok.length+td.no.length,pc=v=>n?Math.round(v/n*100)+'%':'-',sum=(a,f)=>a.reduce((t,x)=>t+f(x),0);
-  const hi=A.items.filter(i=>i.sev==='hi'),mid=A.items.filter(i=>i.sev==='mid'),baru=A.items.filter(i=>i.f.some(x=>x.id==='BERHENTI'||x.id==='CAIR'));
+  const hi=A.items.filter(i=>i.sev==='hi'),mid=A.items.filter(i=>i.sev==='mid');
   const mu=mutasiData(),os=sum(A.loans,r=>r.os),npf=A.loans.filter(r=>r.coll>=3),npfOs=sum(npf,r=>r.os);
   const tile=(k,ic,col,l,v,sb2)=>'<button class="kpi" data-sheet="'+k+'">'+icon(ic,col,38)+'<span class="kt"><span class="l">'+l+'</span><span class="v">'+v+'</span><span class="s">'+sb2+'</span></span></button>';
   h+='<div class="kpis">'+
@@ -452,8 +452,7 @@ function render(){
    tile('npf','chart','pink','Coll 3–4',(os?(npfOs/os*100).toFixed(1).replace('.',','):0)+'%',npf.length+' rekening · '+rpc(npfOs))+
    tile('new','plus','teal','Pinjaman baru',mu?nf.format(mu.baru.length):'-',mu?'plafond '+rpc(sum(mu.baru,x=>x.i.r.plafond)):'perlu periode sebelumnya')+
    tile('lunas','flag','yellow','Lunas',mu?nf.format(mu.lunas.length):'-',mu?'sisa pokok '+rpc(sum(mu.lunas,x=>x.sisa)):'perlu periode sebelumnya')+
-   tile('hi','warn','orange','Temuan tinggi',nf.format(hi.length),mid.length+' sedang')+
-   tile('baru','swap','purple','Perilaku baru',nf.format(baru.length),'berhenti bayar atau cair baru')+'</div>';
+   tile('hi','warn','orange','Potensi temuan',nf.format(hi.length),mid.length+' sedang')+'</div>';
   if(td.later.length)h+='<button class="link" data-sheet="later">'+td.later.length+' rekening belum jatuh tempo per tgl '+A.printDay+' ›</button>';
   h+='<div class="tabs" role="tablist">'+TABS.map(t=>'<button class="tab" role="tab" data-tab="'+t[0]+'" aria-selected="'+(S.tab===t[0])+'">'+icon(t[2],t[3],26)+t[1]+'</button>').join('')+'</div>';
   h+=S.tab==='ringkas'?tabRingkas():S.tab==='temuan'?tabTemuan():S.tab==='tindaklanjut'?tabTindakLanjut():S.tab==='gerak'?tabGerak():S.tab==='ao'?tabAO():tabRiwayat()+tabAturan();
@@ -525,7 +524,7 @@ function tagData(){
   const rows=A.items.map(i=>({i,owed:i.r.ta+(i.duePassed?i.r.tagihan:0),paid:i.r.masuk}));
   return{ok:rows.filter(x=>x.owed>0&&x.paid>0),no:rows.filter(x=>x.owed>0&&x.paid===0),later:rows.filter(x=>x.owed===0)}}
 const SK={new:'Pinjaman baru',lunas:'Lunas',all:'Rekening pembiayaan',ok:'Tertagih',no:'Tidak tertagih',later:'Belum jatuh tempo',baru:'Perilaku baru',npf:'Coll 3–4'};
-function sheetTitle(){const s=S.sheet;return s.k==='hi'?(s.sev==='hi'?'Temuan tinggi':'Temuan sedang'):s.k==='coll'?'Coll '+s.p:SK[s.k]}
+function sheetTitle(){const s=S.sheet;return s.k==='hi'?(s.sev==='hi'?'Potensi temuan tinggi':'Potensi temuan sedang'):s.k==='coll'?'Coll '+s.p:SK[s.k]}
 function sheetItems(){
   const s=S.sheet,td=tagData(),own=new Map(td.ok.concat(td.no,td.later).map(x=>[x.i.r.rek,x]));
   const B=(i,main,sub,dot,sort)=>({i,main,sub,dot,sort});const I=A.items;let l=[];
