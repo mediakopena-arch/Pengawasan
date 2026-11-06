@@ -449,7 +449,7 @@ function render(){
    tile('all','file','blue','Rekening',nf.format(A.loans.length),rpc(os)+' outstanding')+
    tile('ok','check','green','Tertagih',nf.format(td.ok.length),pc(td.ok.length)+' dari yang jatuh tempo')+
    tile('no','cross','red','Tidak tertagih',nf.format(td.no.length),pc(td.no.length)+' · '+rpc(sum(td.no,x=>x.owed)))+
-   tile('npf','chart','pink','Coll 3–4',(os?(npfOs/os*100).toFixed(1).replace('.',','):0)+'%',npf.length+' rekening · '+rpc(npfOs))+
+   tile('keragaan','chart','pink','Keragaan Coll',nf.format(A.loans.length)+' rekening','Coll 3–4: '+npf.length+' rekening · '+rpc(npfOs))+
    tile('new','plus','teal','Pinjaman baru',mu?nf.format(mu.baru.length):'-',mu?'plafond '+rpc(sum(mu.baru,x=>x.i.r.plafond)):'perlu periode sebelumnya')+
    tile('lunas','flag','yellow','Lunas',mu?nf.format(mu.lunas.length):'-',mu?'sisa pokok '+rpc(sum(mu.lunas,x=>x.sisa)):'perlu periode sebelumnya')+
    tile('hi','warn','orange','Potensi temuan',nf.format(hi.length),mid.length+' sedang')+'</div>';
@@ -523,7 +523,7 @@ function itemHtml(i){
 function tagData(){
   const rows=A.items.map(i=>({i,owed:i.r.ta+(i.duePassed?i.r.tagihan:0),paid:i.r.masuk}));
   return{ok:rows.filter(x=>x.owed>0&&x.paid>0),no:rows.filter(x=>x.owed>0&&x.paid===0),later:rows.filter(x=>x.owed===0)}}
-const SK={new:'Pinjaman baru',lunas:'Lunas',all:'Rekening pembiayaan',ok:'Tertagih',no:'Tidak tertagih',later:'Belum jatuh tempo',baru:'Perilaku baru',npf:'Coll 3–4'};
+const SK={new:'Pinjaman baru',lunas:'Lunas',all:'Rekening pembiayaan',ok:'Tertagih',no:'Tidak tertagih',later:'Belum jatuh tempo',baru:'Perilaku baru',npf:'Coll 3–4',keragaan:'Keragaan Coll'};
 function sheetTitle(){const s=S.sheet;return s.k==='hi'?(s.sev==='hi'?'Potensi temuan tinggi':'Potensi temuan sedang'):s.k==='coll'?'Coll '+s.p:SK[s.k]}
 function sheetItems(){
   const s=S.sheet,td=tagData(),own=new Map(td.ok.concat(td.no,td.later).map(x=>[x.i.r.rek,x]));
@@ -535,16 +535,33 @@ function sheetItems(){
   else if(s.k==='hi')l=I.filter(i=>i.sev===s.sev).map(i=>B(i,rpc(i.r.os),i.f.slice().sort((a,b)=>b.sc-a.sc).slice(0,2).map(f=>RULES[f.id].label).join(' · '),i.sev,i.score));
   else if(s.k==='baru')l=I.filter(i=>i.f.some(x=>x.id==='BERHENTI'||x.id==='CAIR')).map(i=>{const o=own.get(i.r.rek);return B(i,rpc(o&&o.owed?o.owed:i.r.os),i.f.filter(x=>x.id==='BERHENTI'||x.id==='CAIR').map(x=>RULES[x.id].label).join(' · '),i.sev,i.score)});
   else if(s.k==='npf')l=I.filter(i=>i.r.coll>=3).map(i=>B(i,rpc(i.r.os),'Coll '+i.r.coll+' · '+i.r.bln+' bln','no',i.r.os));
+  else if(s.k==='keragaan')l=I.map(i=>B(i,rpc(i.r.os),'Coll '+i.r.coll+' · '+(i.r.bln?i.r.bln+' bln menunggak':'tidak menunggak'),i.r.coll>=3?'no':'n',i.r.os));
   else if(s.k==='new'){const m=mutasiData();l=m?m.baru.map(x=>B(x.i,rpc(x.i.r.plafond),x.note||'plafond',x.sev==='lo'&&!x.note?'n':x.sev,x.i.r.plafond)):[]}
   else if(s.k==='lunas'){const m=mutasiData();l=m?m.lunas.map(x=>({l:x,main:x.unknown?'-':rpc(x.sisa),sub:'sisa pokok · '+x.periode+(x.zero?'':' · hilang'),dot:x.sev,sort:x.sisa+({hi:3e12,mid:2e12,lo:0}[x.sev]||0)})):[]}
   else if(s.k==='coll')l=I.filter(i=>Math.min(4,i.r.coll)===s.p).map(i=>B(i,rpc(i.r.os),i.r.bln?i.r.bln+' bln menunggak':'tidak menunggak',i.r.coll>=3?'no':'n',i.r.os));
   const q=S.sq.trim().toUpperCase();
+  if(s.k==='keragaan'&&s.p!==null&&s.p!==undefined)l=l.filter(x=>x.i.r.coll===s.p);
   const R=x=>x.i?x.i.r:x.l.r;
   if(S.sao)l=l.filter(x=>R(x).ao===S.sao);
   if(q)l=l.filter(x=>R(x).nama.toUpperCase().includes(q)||R(x).rek.includes(q));
   return l.sort((a,b)=>b.sort-a.sort||R(a).rek.localeCompare(R(b).rek))}
 function sheetRow(x){const r=x.i?x.i.r:x.l.r,open=S.open.has(r.rek);
   return'<div class="item"><button class="row" data-rek="'+r.rek+'" aria-expanded="'+open+'"><span class="dotc '+x.dot+'"></span><span class="who"><b>'+esc(r.nama)+'</b><span><span class="mono">'+r.rek+'</span> · '+esc(r.ao)+'</span></span><span class="amt">'+x.main+'<small>'+esc(x.sub)+'</small></span></button>'+(open?(x.i?detailHtml(x.i):lunasDetail(x.l)):'')+'</div>'}
+function keragaanChart(snap){
+ const periods=Object.values(mem.snaps).filter(x=>x.kantor===snap.kantor).sort((a,b)=>(a.tahun*12+a.bulan)-(b.tahun*12+b.bulan));
+ if(!periods.length)return'<p class="muted small">Belum ada data bulanan.</p>';
+ const W=Math.max(560,periods.length*62+50),H=245,L=46,R=8,T=20,B=42,pw=W-L-R,ph=H-T-B,max=niceMax(Math.max(1,...periods.map(x=>x.rows.filter(r=>r.prod!=='111').length))),Y=v=>T+ph-v/max*ph,bw=Math.min(34,pw/periods.length*.62);let g='';
+ for(let j=0;j<=4;j++){const v=max*j/4;g+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="var(--line)"/><text x="'+(L-7)+'" y="'+(Y(v)+4)+'" text-anchor="end" font-size="10" fill="var(--ink3)">'+nf.format(v)+'</text>'}
+ periods.forEach((p,i)=>{const c=[0,0,0,0,0];p.rows.filter(r=>r.prod!=='111').forEach(r=>c[Math.min(4,r.coll)]++);const cx=L+pw/periods.length*(i+.5);let acc=0;
+  c.forEach((v,k)=>{if(!v)return;const y=Y(acc+v),hh=Y(acc)-y;acc+=v;g+='<rect x="'+(cx-bw/2)+'" y="'+y+'" width="'+bw+'" height="'+Math.max(hh,0)+'" rx="2" fill="var(--c'+k+')" data-tip="'+BLN[p.bulan]+' '+p.tahun+' · Coll '+k+': '+nf.format(v)+' rekening"/>'});
+  const label=BLN[p.bulan]+' '+String(p.tahun).slice(-2);g+='<text x="'+cx+'" y="'+(H-17)+'" text-anchor="middle" font-size="10" fill="var(--ink2)">'+esc(label)+'</text>';
+ });
+ return'<div class="chartbox" style="overflow-x:auto"><svg id="keragaanChart" viewBox="0 0 '+W+' '+H+'" style="min-width:'+Math.min(W,560)+'px" role="img" aria-label="Pergerakan jumlah rekening Coll 0 sampai 4 untuk semua bulan yang diunggah">'+g+'</svg><div class="legend">'+[0,1,2,3,4].map(k=>'<span><i style="background:var(--c'+k+')"></i>Coll '+k+'</span>').join('')+'</div></div>'
+}
+function keragaanOverview(snap){
+ const counts=[0,0,0,0,0];for(const r of A.loans)counts[Math.min(4,r.coll)]++;
+ return'<div class="card"><h2>Keragaan Coll per bulan · '+esc(snap.nama)+'</h2><p class="muted small" style="margin-bottom:8px">Batang menunjukkan jumlah rekening pada tiap Coll untuk seluruh periode yang sudah diunggah. Pilih Coll untuk menyaring daftar rekening.</p>'+keragaanChart(snap)+'<div class="mgrid" style="margin-top:10px"><button class="mchip '+(S.sheet.p==null?'sel':'')+'" data-kcoll="all"><b>Semua Coll</b><span>'+nf.format(A.loans.length)+' rekening</span></button>'+counts.map((n,k)=>'<button class="mchip '+(S.sheet.p===k?'sel':'')+'" data-kcoll="'+k+'"><b>Coll '+k+'</b><span>'+nf.format(n)+' rekening · '+rpc(A.loans.filter(r=>r.coll===k).reduce((a,r)=>a+r.os,0))+'</span></button>').join('')+'</div></div>'
+}
 function sheetHtml(){
   if(!S.sheet)return'';
   const sn=curSnap(),l=sheetItems(),shown=l.slice(0,S.sshow),aos=[...new Set(A.items.map(x=>x.r.ao).concat(S.sheet.k==='lunas'?l.map(x=>x.l.r.ao):[]))].sort();
@@ -552,7 +569,7 @@ function sheetHtml(){
    '<div class="sh"><div><h2 style="margin:0">'+esc(sheetTitle())+'</h2><p class="muted small">'+nf.format(l.length)+' rekening · '+BLN[sn.bulan]+' '+sn.tahun+'</p></div><div class="actions"><button class="btn sm" id="scopy">Salin</button><button class="x" id="sclose" aria-label="Tutup">✕</button></div></div>'+
    '<div class="sf"><input type="search" id="sq" placeholder="Cari nama / rekening" value="'+esc(S.sq)+'" aria-label="Cari"><select id="sao" aria-label="AO"><option value="">Semua AO</option>'+aos.map(a=>'<option'+(S.sao===a?' selected':'')+'>'+esc(a)+'</option>').join('')+'</select>'+
    (S.sheet.k==='hi'?'<span class="seg" id="ssev"><button data-k="hi" aria-pressed="'+(S.sheet.sev==='hi')+'">Tinggi</button><button data-k="mid" aria-pressed="'+(S.sheet.sev==='mid')+'">Sedang</button></span>':'')+'</div>'+
-   '<div class="sheet-body">'+(l.length?'<div class="list">'+shown.map(sheetRow).join('')+'</div>'+(l.length>shown.length?'<button class="btn" id="smore">Tampilkan '+Math.min(60,l.length-shown.length)+' lagi</button>':''):'<div class="card muted">'+(A.chg||!['new','lunas'].includes(S.sheet.k)?'Tidak ada rekening.':'Unggah periode sebelumnya untuk membandingkan.')+'</div>')+'</div></section>'}
+   '<div class="sheet-body">'+(S.sheet.k==='keragaan'?keragaanOverview(sn):'')+(l.length?'<div class="list">'+shown.map(sheetRow).join('')+'</div>'+(l.length>shown.length?'<button class="btn" id="smore">Tampilkan '+Math.min(60,l.length-shown.length)+' lagi</button>':''):'<div class="card muted">'+(A.chg||!['new','lunas'].includes(S.sheet.k)?'Tidak ada rekening.':'Unggah periode sebelumnya untuk membandingkan.')+'</div>')+'</div></section>'}
 function openSheet(k,p,sev){S.sheet={k,p,sev:sev||'hi'};S.sq='';S.sao='';S.sshow=60;S.open.clear();render();const c=$('#sclose');if(c)c.focus({preventScroll:true})}
 function closeSheet(){S.sheet=null;render()}
 function tabRingkas(){
@@ -709,6 +726,8 @@ function bind(){
   root.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{S.cur=b.dataset.m;S.open.clear();recompute();render()});
   root.querySelectorAll('[data-yr]').forEach(b=>b.onchange=e=>{S.year=+e.target.value;render()});
   root.querySelectorAll('[data-sheet]').forEach(b=>b.onclick=()=>openSheet(b.dataset.sheet,null,'hi'));
+  root.querySelectorAll('[data-kcoll]').forEach(b=>b.onclick=()=>{S.sheet.p=b.dataset.kcoll==='all'?null:+b.dataset.kcoll;S.sshow=60;render()});
+  const kchart=$('#keragaanChart',root);if(kchart){const tip=$('#tip');kchart.addEventListener('pointermove',e=>{const r=e.target.closest('[data-tip]');if(!r){tip.hidden=true;return}tip.textContent=r.dataset.tip;tip.hidden=false;tip.style.left=Math.min(e.clientX+12,innerWidth-250)+'px';tip.style.top=(e.clientY+14)+'px'});kchart.addEventListener('pointerleave',()=>tip.hidden=true)}
   const sc=$('#scrim',root);if(sc)sc.onclick=closeSheet;const scl=$('#sclose',root);if(scl)scl.onclick=closeSheet;
   const sq=$('#sq',root);if(sq)sq.oninput=e=>{S.sq=e.target.value;S.sshow=60;const p=e.target.selectionStart;render();const n=$('#sq');n.focus();n.setSelectionRange(p,p)};
   const sao=$('#sao',root);if(sao)sao.onchange=e=>{S.sao=e.target.value;S.sshow=60;render()};
