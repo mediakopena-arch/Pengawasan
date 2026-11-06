@@ -199,9 +199,10 @@ button.kpi:active{transform:translateY(1px)}
 .install-prompt[hidden]{display:none}
 .install-copy{flex:1;min-width:0}.install-copy b{display:block;font-size:15px}.install-copy span{display:block;color:var(--ink2);font-size:12px;line-height:1.4;margin-top:2px}
 .install-action{white-space:nowrap}.install-close{border:0;background:none;color:var(--ink2);font-size:22px;padding:2px 5px;line-height:1}
+@media print{#installPrompt,.toast,.tip{display:none!important}body{background:#fff!important;padding:0!important;color:#111!important}.wrap{display:none!important}#printReport{display:block!important;padding:16px;font:11px Arial,sans-serif;color:#111}#printReport h1{font-size:18px;margin:0 0 4px}#printReport p{margin:0 0 12px}#printReport table{font-size:9px}#printReport th,#printReport td{padding:4px 5px;border:1px solid #bbb;white-space:normal;text-align:left}#printReport th{background:#eee!important}}
 </style>
 
-<div class="wrap" id="app"></div>
+<div class="wrap" id="app"></div><div id="printReport" hidden></div>
 <div class="install-prompt" id="installPrompt" role="status" hidden><div class="install-copy"><b>Pasang Pengawasan</b><span id="installMessage"></span></div><button class="btn pri sm install-action" id="installAction" hidden>Pasang</button><button class="install-close" id="installClose" aria-label="Tutup">×</button></div>
 <div class="toast" id="toast" hidden></div>
 <div class="tip" id="tip" hidden></div>
@@ -227,9 +228,9 @@ function copy(text,msg){
 
 /* ---------- storage ---------- */
 const KEY='pelacak-tagihan.v1';
-let mem={snaps:{},settings:null};
+let mem={snaps:{},settings:null,followups:{}};
 function load(){try{const r=localStorage.getItem(KEY);if(r)mem=JSON.parse(r)}catch(e){}
-  mem.snaps=mem.snaps||{};
+  mem.snaps=mem.snaps||{};mem.followups=mem.followups||{};
   mem.settings=Object.assign({duePass:true,blnKronis:3,osPlafond:99.5,mirip:80},mem.settings||{})}
 let storeOk=true;
 function save(){try{localStorage.setItem(KEY,JSON.stringify(mem));storeOk=true}catch(e){storeOk=false}}
@@ -407,7 +408,7 @@ const GL={
 function icon(name,color,size){const c=IC[color]||IC.blue;size=size||40;
   return'<svg class="ic" width="'+size+'" height="'+size+'" viewBox="0 0 48 48" aria-hidden="true"><rect x="3" y="7" width="42" height="38" rx="13" fill="'+c[2]+'"/><rect x="3" y="3" width="42" height="38" rx="13" fill="url(#g-'+color+')"/><path d="M9 18c0-8 5-11.5 15-11.5S39 10 39 18c-8-5-22-5-30 0z" fill="#fff" opacity=".32"/><g transform="translate(12 9)" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" filter="url(#sh)">'+(GL[name]||'')+'</g></svg>'}
 const DEFS='<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>'+Object.entries(IC).map(([k,c])=>'<linearGradient id="g-'+k+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+c[0]+'"/><stop offset="1" stop-color="'+c[1]+'"/></linearGradient>').join('')+'<filter id="sh" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="1.4" stdDeviation=".9" flood-color="#000" flood-opacity=".3"/></filter></defs></svg>';
-const TABS=[['ringkas','Ringkasan','money','green'],['temuan','Temuan','search','pink'],['gerak','Pergerakan','chart','blue'],['ao','Per AO','users','purple'],['data','Data','sliders','yellow']];
+const TABS=[['ringkas','Ringkasan','money','green'],['temuan','Temuan','search','pink'],['tindaklanjut','Tindak Lanjut','check','teal'],['gerak','Pergerakan','chart','blue'],['ao','Per AO','users','purple'],['data','Data','sliders','yellow']];
 
 /* ---------- render ---------- */
 function histHtml(rek){
@@ -455,7 +456,7 @@ function render(){
    tile('baru','swap','purple','Perilaku baru',nf.format(baru.length),'berhenti bayar atau cair baru')+'</div>';
   if(td.later.length)h+='<button class="link" data-sheet="later">'+td.later.length+' rekening belum jatuh tempo per tgl '+A.printDay+' ›</button>';
   h+='<div class="tabs" role="tablist">'+TABS.map(t=>'<button class="tab" role="tab" data-tab="'+t[0]+'" aria-selected="'+(S.tab===t[0])+'">'+icon(t[2],t[3],26)+t[1]+'</button>').join('')+'</div>';
-  h+=S.tab==='ringkas'?tabRingkas():S.tab==='temuan'?tabTemuan():S.tab==='gerak'?tabGerak():S.tab==='ao'?tabAO():tabRiwayat()+tabAturan();
+  h+=S.tab==='ringkas'?tabRingkas():S.tab==='temuan'?tabTemuan():S.tab==='tindaklanjut'?tabTindakLanjut():S.tab==='gerak'?tabGerak():S.tab==='ao'?tabAO():tabRiwayat()+tabAturan();
   h+=sheetHtml();
   root.innerHTML=h;document.body.classList.toggle('lock',!!S.sheet);bind();
   const nb=$('.sheet-body');if(nb)nb.scrollTop=sTop}
@@ -481,11 +482,29 @@ function tabTemuan(){
    '<select id="fao" aria-label="AO">'+opt('','Semua AO',f.ao)+aos.map(a=>opt(a,a,f.ao)).join('')+'</select>'+
    '<select id="fprod" aria-label="Produk">'+opt('','Semua produk',f.prod)+prods.map(p=>{const[c,n]=p.split('|');return opt(c,c+' '+n,f.prod)}).join('')+'</select>'+
    '<select id="fsort" aria-label="Urutan">'+opt('score','Urut: skor risiko',f.sort)+opt('os','Urut: outstanding',f.sort)+opt('bln','Urut: bulan tunggakan',f.sort)+opt('rek','Urut: no. rekening',f.sort)+'</select></div>'+
-   '<div class="actions"><span class="muted small">'+nf.format(list.length)+' rekening ditandai</span><button class="btn sm" id="copyList">Salin daftar (tempel ke Excel)</button></div>';
+   '<div class="actions"><span class="muted small">'+nf.format(list.length)+' rekening ditandai</span><button class="btn sm" id="copyList">Salin daftar (tempel ke Excel)</button><button class="btn sm" id="exportFindingsCsv">Ekspor CSV</button><button class="btn sm" id="printFindings">Cetak / PDF</button></div>';
   if(!list.length)return h+'<div class="card muted">Tidak ada rekening yang cocok dengan filter ini.</div>';
   h+='<div class="list">'+shown.map(itemHtml).join('')+'</div>';
   if(list.length>shown.length)h+='<button class="btn" id="more">Tampilkan '+Math.min(50,list.length-shown.length)+' lagi</button>';
   return h}
+function fuKey(kantor,rek){return kantor+'|'+rek}
+function followupRows(){
+  const snap=curSnap(),by=new Map();
+  for(const i of A.items){if(!i.f.length)continue;const r=i.r,k=fuKey(snap.kantor,r.rek),old=mem.followups[k]||{};by.set(k,Object.assign({kantor:snap.kantor,rek:r.rek,nama:r.nama,ao:r.ao,coll:r.coll,os:r.os,findings:i.f.map(x=>RULES[x.id].label).join('; '),status:'Belum dimulai',pic:'',due:'',note:''},old,{kantor:snap.kantor,rek:r.rek,nama:r.nama,ao:r.ao,coll:r.coll,os:r.os,findings:i.f.map(x=>RULES[x.id].label).join('; ')}))}
+  for(const [k,v] of Object.entries(mem.followups))if(v.kantor===snap.kantor&&!by.has(k))by.set(k,v);
+  return [...by.entries()].map(([key,row])=>({key,row})).sort((a,b)=>a.row.status.localeCompare(b.row.status)||a.row.nama.localeCompare(b.row.nama))
+}
+function csvEscape(v){return'"'+String(v==null?'':v).replace(/"/g,'""')+'"'}
+function csvDownload(name,headers,rows){const blob=new Blob(['\ufeff'+[headers,...rows].map(r=>r.map(csvEscape).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function printTable(title,headers,rows){const box=$('#printReport'),snap=curSnap();box.innerHTML='<h1>'+esc(title)+'</h1><p>'+esc(snap.nama+' · '+BLN[snap.bulan]+' '+snap.tahun+' · Dicetak '+snap.cetak)+'</p><table><thead><tr>'+headers.map(x=>'<th>'+esc(x)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(row=>'<tr>'+row.map(x=>'<td>'+esc(x==null?'':x)+'</td>').join('')+'</tr>').join('')+'</tbody></table>';box.hidden=false;window.print();setTimeout(()=>box.hidden=true,1200)}
+function tabTindakLanjut(){
+ const entries=followupRows(),q=(S.fuQ||'').trim().toUpperCase(),filter=S.fuStatus||'';
+ const rows=entries.filter(x=>(!filter||x.row.status===filter)&&(!q||(x.row.nama+' '+x.row.rek+' '+x.row.ao).toUpperCase().includes(q)));
+ const statuses=['Belum dimulai','Sedang ditindaklanjuti','Selesai'];
+ let h='<div class="card"><h2>Catat tindak lanjut temuan</h2><p class="muted small">Catatan disimpan di browser/perangkat ini. Buat cadangan melalui menu Data agar bisa dipindahkan ke perangkat lain.</p></div><div class="filters"><input id="fuQ" type="search" placeholder="Cari nama, rekening, atau AO" value="'+esc(S.fuQ||'')+'"><select id="fuStatus"><option value="">Semua status</option>'+statuses.map(x=>'<option'+(filter===x?' selected':'')+'>'+x+'</option>').join('')+'</select></div><div class="actions"><span class="muted small">'+nf.format(rows.length)+' catatan</span><button class="btn sm" id="exportFollowupsCsv">Ekspor CSV</button><button class="btn sm" id="printFollowups">Cetak / PDF</button></div>';
+ if(!rows.length)return h+'<div class="card muted">Belum ada temuan yang cocok. Unggah laporan dan buka menu Temuan.</div>';
+ h+='<div class="cols">'+rows.map(({key,row:r})=>'<div class="card" data-followup-card="'+esc(key)+'"><h2>'+esc(r.nama)+'</h2><p class="small muted"><span class="mono">'+esc(r.rek)+'</span> · AO '+esc(r.ao||'-')+' · Coll '+esc(r.coll==null?'-':r.coll)+'</p><p class="small" style="margin:7px 0">'+esc(r.findings||'Temuan dari laporan sebelumnya')+'</p><div style="display:grid;gap:8px"><label>Status <select data-fu="status">'+statuses.map(x=>'<option'+(r.status===x?' selected':'')+'>'+x+'</option>').join('')+'</select></label><label>Penanggung jawab <input data-fu="pic" value="'+esc(r.pic||'')+'" placeholder="Nama petugas"></label><label>Target selesai <input data-fu="due" type="date" value="'+esc(r.due||'')+'"></label><label>Catatan <textarea data-fu="note" placeholder="Tindakan atau hasil pemeriksaan">'+esc(r.note||'')+'</textarea></label><button class="btn pri" data-followup-save>Simpan tindak lanjut</button></div></div>').join('')+'</div>';return h
+}
 function detailHtml(i){
   const r=i.r;
   return'<div class="detail"><div><h2>Alasan ditandai</h2>'+(i.f.length?'<ul>'+i.f.map(x=>'<li><b>'+esc(RULES[x.id].label)+'.</b> '+esc(x.txt)+'</li>').join('')+'</ul>':'<p class="muted">Tidak ada tanda khusus pada periode ini.</p>')+'</div>'+
@@ -715,11 +734,24 @@ function bind(){
     const rows=filtered();const hd=['Rekening','Nama','AO','Produk','Plafond','Outstanding','Kol','Bln tunggak','Tunggakan awal','Tagihan','Setoran','Tunggakan akhir','Jatuh tempo','Tingkat','Skor','Temuan'];
     const t=[hd].concat(rows.map(i=>{const r=i.r;return[r.rek,r.nama,r.ao,r.prod,r.plafond,r.os,r.coll,r.bln,r.ta,r.tagihan,r.masuk,r.takhir,r.jt,i.sev==='hi'?'Tinggi':i.sev==='mid'?'Sedang':'Rendah',Math.round(i.score),i.f.map(x=>RULES[x.id].label).join('; ')]})).map(r=>r.join('\t')).join('\n');
     copy(t,rows.length+' baris disalin. Tempel di Excel.')};
+  const findExport=$('#exportFindingsCsv',root),findPrint=$('#printFindings',root);
+  const findingRows=()=>filtered().map(i=>{const r=i.r;return[BLN[curSnap().bulan]+' '+curSnap().tahun,curSnap().nama,r.rek,r.nama,r.ao,r.prod,r.coll,r.bln,r.os,r.tagihan,r.masuk,i.sev==='hi'?'Tinggi':i.sev==='mid'?'Sedang':'Rendah',i.f.map(x=>RULES[x.id].label).join('; ')]});
+  const fheads=['Periode','Kantor','Rekening','Nama','AO','Produk','Coll','Bulan tunggakan','Outstanding','Tagihan','Setoran','Tingkat','Temuan'];
+  if(findExport)findExport.onclick=()=>csvDownload('laporan-temuan.csv',fheads,findingRows());
+  if(findPrint)findPrint.onclick=()=>printTable('Laporan Temuan',fheads,findingRows());
+  const fuq=$('#fuQ',root);if(fuq)fuq.oninput=e=>{S.fuQ=e.target.value;const p=e.target.selectionStart;render();const n=$('#fuQ');n.focus();n.setSelectionRange(p,p)};
+  const fus=$('#fuStatus',root);if(fus)fus.onchange=e=>{S.fuStatus=e.target.value;render()};
+  root.querySelectorAll('[data-followup-save]').forEach(b=>b.onclick=()=>{const card=b.closest('[data-followup-card]'),key=card.dataset.followupCard,base=followupRows().find(x=>x.key===key)?.row||mem.followups[key]||{};mem.followups[key]=Object.assign({},base,{status:$('[data-fu="status"]',card).value,pic:$('[data-fu="pic"]',card).value.trim(),due:$('[data-fu="due"]',card).value,note:$('[data-fu="note"]',card).value.trim(),updated:new Date().toISOString()});save();render();toast('Tindak lanjut disimpan')});
+  const fuExport=$('#exportFollowupsCsv',root),fuPrint=$('#printFollowups',root);
+  const fuHeads=['Kantor','Periode','Rekening','Nama','AO','Coll','Outstanding','Temuan','Status','Penanggung jawab','Target selesai','Catatan','Terakhir diperbarui'];
+  const fuData=()=>followupRows().map(x=>{const r=x.row,s=curSnap();return[r.kantor,BLN[s.bulan]+' '+s.tahun,r.rek,r.nama,r.ao,r.coll,r.os,r.findings,r.status,r.pic,r.due,r.note,r.updated||'']});
+  if(fuExport)fuExport.onclick=()=>csvDownload('laporan-tindak-lanjut.csv',fuHeads,fuData());
+  if(fuPrint)fuPrint.onclick=()=>printTable('Laporan Tindak Lanjut',fuHeads,fuData());
   const set=(id,fn)=>{const e=$('#'+id,root);if(e)e.onchange=ev=>{fn(ev.target);save();recompute();render()}};
   set('sduePass',e=>mem.settings.duePass=e.checked);set('sbln',e=>mem.settings.blnKronis=Math.max(1,+e.value||3));
   set('sos',e=>mem.settings.osPlafond=+e.value||99.5);set('smirip',e=>mem.settings.mirip=+e.value||80);
-  const bk=$('#bk',root);if(bk)bk.onclick=()=>copy(JSON.stringify({snaps:mem.snaps}),'Cadangan disalin');
-  const rs=$('#rs',root);if(rs)rs.onclick=()=>{try{const d=JSON.parse($('#restore').value);if(!d.snaps)throw 0;Object.assign(mem.snaps,d.snaps);save();if(!S.cur)pickLatest();recompute();render();toast('Riwayat dipulihkan')}catch(e){toast('Cadangan tidak valid')}};
+  const bk=$('#bk',root);if(bk)bk.onclick=()=>copy(JSON.stringify({snaps:mem.snaps,followups:mem.followups}),'Cadangan disalin');
+  const rs=$('#rs',root);if(rs)rs.onclick=()=>{try{const d=JSON.parse($('#restore').value);if(!d.snaps)throw 0;Object.assign(mem.snaps,d.snaps);mem.followups=Object.assign(mem.followups,d.followups||{});save();if(!S.cur)pickLatest();recompute();render();toast('Riwayat dipulihkan')}catch(e){toast('Cadangan tidak valid')}};
   root.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Klik lagi untuk hapus';return}
     delete mem.snaps[b.dataset.del];save();if(S.cur===b.dataset.del)pickLatest();recompute();render()});
 }
