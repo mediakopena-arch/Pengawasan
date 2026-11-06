@@ -13,3 +13,5 @@ Halaman utama dapat dibuka kembali saat offline setelah kunjungan pertama.
 ## Temuan, tindak lanjut, dan laporan
 
 Menu **Tindak Lanjut** menyimpan status pemeriksaan, penanggung jawab, target selesai, dan catatan pada perangkat/browser yang digunakan. Gunakan **Data → Salin cadangan** untuk menyimpan atau memindahkan catatan bersama riwayat laporan. Menu **Temuan** dan **Tindak Lanjut** menyediakan ekspor CSV; tombol **Cetak / PDF** membuka dialog cetak browser, tempat Anda dapat memilih simpan sebagai PDF.
+
+Menu **Kesimpulan** merangkum rekening, setoran, kewajiban, tren Coll, rekening baru, pelunasan/keluar, potensi temuan, dan status tindak lanjut untuk periode terpilih. Tombol **Cetak / Simpan PDF** membuka dialog cetak browser; pilih simpan sebagai PDF untuk membuat berkas.
