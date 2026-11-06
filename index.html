@@ -515,7 +515,7 @@ function itemHtml(i){
   const chips=i.f.map(x=>'<span class="chip">'+esc(RULES[x.id].label)+'</span>').join('');
   let h='<div class="item"><button class="row" data-rek="'+r.rek+'" aria-expanded="'+open+'"><span class="sev '+i.sev+'">'+sevLabel(i.sev)+'</span>'+
    '<span class="who"><b>'+esc(r.nama)+'</b><span><span class="mono">'+r.rek+'</span> · '+esc(r.ao)+'</span></span>'+
-   '<span class="amt">'+rpc(r.os)+'<small>'+(r.bln?r.bln+' bln menunggak':'tidak menunggak')+'</small></span><span class="chips">'+chips+'</span></button>';
+   '<span class="amt">'+rpc(r.os)+'<small>Outstanding</small><small>Plafon '+rpc(r.plafond)+'</small><small>'+(r.bln?r.bln+' bln menunggak':'tidak menunggak')+'</small></span><span class="chips">'+chips+'</span></button>';
   if(open)h+=detailHtml(i);
   return h+'</div>'}
 
